@@ -40,8 +40,15 @@ const AuthPage: React.FC = () => {
                 backgroundRepeat: 'no-repeat',
             }}
         >
-            <div className="auth-card" style={{ height: cardHeight, position: 'relative' }}>
-                <SwitchTransition mode="out-in">
+            <div
+                className="auth-card"
+                style={{
+                    height: typeof cardHeight === 'number' ? `${cardHeight}px` : 'auto',
+                    transition: 'height 0.3s ease',
+                    position: 'relative',
+                }}
+            >
+            <SwitchTransition mode="out-in">
                     <CSSTransition
                         key={isLoginView ? 'login' : 'register'}
                         nodeRef={transitionRef}
@@ -50,11 +57,8 @@ const AuthPage: React.FC = () => {
                         unmountOnExit
                         onEntered={updateCardHeight}
                     >
-                        <div
-                            ref={transitionRef}
-                            style={{ position: 'absolute', width: '100%' }}
-                        >
-                            {isLoginView ? (
+                        <div ref={transitionRef} style={{ width: '100%' }}>
+                        {isLoginView ? (
                                 <Login onSwitch={handleSwitch} />
                             ) : (
                                 <Register onSwitch={handleSwitch} />
