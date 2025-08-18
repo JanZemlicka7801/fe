@@ -5,13 +5,16 @@ import Login from './Login';
 import Register from './Register';
 
 import backgroundImage from '../images/background.jpg';
+import {useAuth} from "../contexts/AuthContext";
 
 const AuthPage: React.FC = () => {
     const [isLoginView, setIsLoginView] = useState(true);
     const [cardHeight, setCardHeight] = useState<number | string>('auto');
     const transitionRef = useRef<HTMLDivElement>(null); // single ref for CSSTransition
 
+    const { setError } = useAuth();
     const handleSwitch = () => {
+        setError(null); // Clear previous errors
         setIsLoginView(prev => !prev);
     };
 

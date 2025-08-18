@@ -20,6 +20,7 @@ interface AuthContextType {
   register: (username: string, email: string, password: string, role?: 'USER' | 'ADMIN') => Promise<void>;
   logout: () => void;
   error: string | null;
+  setError: (error: string | null) => void;
 }
 
 // Create the context with a default value
@@ -32,7 +33,8 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
-  error: null
+  error: null,
+  setError: () => {}
 });
 
 // Custom hook to use the auth context
@@ -107,7 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (username: string, email: string, password: string, role: 'USER' | 'ADMIN' = 'USER') => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Make API call to register endpoint
       const response = await fetch(`${API_URL}/auth/register`, {
@@ -160,7 +162,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    error
+    error,
+    setError
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
