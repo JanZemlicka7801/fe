@@ -24,16 +24,20 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
 
     const passwordRequirements = {
         minLength: (pw: string) => pw.length >= 6,
-        hasNumber: (pw: string) => /\d/.test(pw),
         hasUppercase: (pw: string) => /[A-Z]/.test(pw),
+        hasLowercase: (pw: string) => /[a-z]/.test(pw),
+        hasNumber: (pw: string) => /\d/.test(pw),
+        hasSpecialChar: (pw: string) => /[\W_]/.test(pw),
     };
 
     const isEmailValid = isValidEmail(email);
     const pwValid = {
         isSame: password === confirmPassword,
         minLength: passwordRequirements.minLength(password),
-        hasNumber: passwordRequirements.hasNumber(password),
         hasUppercase: passwordRequirements.hasUppercase(password),
+        hasLowercase: passwordRequirements.hasLowercase(password),
+        hasNumber: passwordRequirements.hasNumber(password),
+        hasSpecialChar: passwordRequirements.hasSpecialChar(password),
     };
 
     // Validation helpers
@@ -46,8 +50,11 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
     };
 
     const validatePassword = (value: string) => {
-        if (!value || value.length < 6) {
-            setFormErrors(prev => ({ ...prev, password: 'Password must be at least 6 characters' }));
+        const requirementsMet = Object.values(passwordRequirements).every((check) => check(value));
+        if (!requirementsMet) {
+            setFormErrors(prev => ({
+                ...prev
+            }));
         } else {
             setFormErrors(prev => ({ ...prev, password: undefined }));
         }
@@ -55,7 +62,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
 
     const validateConfirmPassword = (value: string, pwd: string) => {
         if (value !== pwd) {
-            setFormErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+            setFormErrors(prev => ({ ...prev }));
         } else {
             setFormErrors(prev => ({ ...prev, confirmPassword: undefined }));
         }
@@ -64,10 +71,25 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
     const validateForm = (): boolean => {
         const errors: typeof formErrors = {};
 
-        if (!username || username.length < 3) errors.username = 'Username must be at least 3 characters';
-        if (!email || !/\S+@\S+\.\S+/.test(email)) errors.email = 'Email is invalid';
-        if (!password || password.length < 6) errors.password = 'Password must be at least 6 characters';
-        if (password !== confirmPassword) errors.confirmPassword = 'Passwords do not match';
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
+
+        if (!username || username.length < 3) {
+            errors.username = 'Username must be at least 3 characters';
+        }
+
+        if (!email || !/\S+@\S+\.\S+/.test(email)) {
+            errors.email = 'Email is invalid';
+        }
+
+        if (!password || password.length < 6) {
+            errors.password = 'Password must be at least 6 characters';
+        } else if (!passwordRegex.test(password)) {
+            errors.password = 'Password must include at least one uppercase letter, one lowercase letter, one number, and one special character';
+        }
+
+        if (password !== confirmPassword) {
+            errors.confirmPassword = 'Passwords do not match';
+        }
 
         setFormErrors(errors);
         return Object.keys(errors).length === 0;
@@ -156,11 +178,17 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
                         <li className={pwValid.minLength ? 'valid' : 'invalid'}>
                             {pwValid.minLength ? '✔' : '✘'} At least 6 characters
                         </li>
-                        <li className={pwValid.hasNumber ? 'valid' : 'invalid'}>
-                            {pwValid.hasNumber ? '✔' : '✘'} Includes a number
-                        </li>
                         <li className={pwValid.hasUppercase ? 'valid' : 'invalid'}>
-                            {pwValid.hasUppercase ? '✔' : '✘'} Includes an uppercase letter
+                            {pwValid.hasUppercase ? '✔' : '✘'} At least one uppercase letter
+                        </li>
+                        <li className={pwValid.hasLowercase ? 'valid' : 'invalid'}>
+                            {pwValid.hasLowercase ? '✔' : '✘'} At least one lowercase letter
+                        </li>
+                        <li className={pwValid.hasNumber ? 'valid' : 'invalid'}>
+                            {pwValid.hasNumber ? '✔' : '✘'} At least one number
+                        </li>
+                        <li className={pwValid.hasSpecialChar ? 'valid' : 'invalid'}>
+                            {pwValid.hasSpecialChar ? '✔' : '✘'} At least one special character
                         </li>
                     </ul>
                 </div>
