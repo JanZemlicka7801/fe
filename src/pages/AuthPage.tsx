@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+// src/pages/AuthPage.tsx
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
 
 import Login from './Login';
@@ -8,10 +9,29 @@ import backgroundImage from '../images/background.jpg';
 
 const AuthPage: React.FC = () => {
     const [isLoginView, setIsLoginView] = useState(true);
+    const [cardHeight, setCardHeight] = useState<number | string>('auto');
+    const transitionRef = useRef<HTMLDivElement>(null); // single ref for CSSTransition
 
-    const loginRef = useRef<HTMLDivElement>(null);
-    const registerRef = useRef<HTMLDivElement>(null);
-    const nodeRef = isLoginView ? loginRef : registerRef;
+    const handleSwitch = () => {
+        setIsLoginView(prev => !prev);
+    };
+
+    const updateCardHeight = useCallback(() => {
+        if (transitionRef.current) {
+            setCardHeight(transitionRef.current.offsetHeight);
+        }
+    }, []);
+
+    // Initial height
+    useEffect(() => {
+        updateCardHeight();
+    }, []);
+
+    // Update height on view switch
+    useEffect(() => {
+        const timeout = setTimeout(updateCardHeight, 350); // wait for transition
+        return () => clearTimeout(timeout);
+    }, [isLoginView, updateCardHeight]);
 
     return (
         <div
@@ -23,20 +43,24 @@ const AuthPage: React.FC = () => {
                 backgroundRepeat: 'no-repeat',
             }}
         >
-            <div className="auth-card">
+            <div className="auth-card" style={{ height: cardHeight, position: 'relative' }}>
                 <SwitchTransition mode="out-in">
                     <CSSTransition
                         key={isLoginView ? 'login' : 'register'}
-                        nodeRef={nodeRef}
+                        nodeRef={transitionRef}
                         timeout={300}
                         classNames="form-slide"
                         unmountOnExit
+                        onEntered={updateCardHeight}
                     >
-                        <div ref={nodeRef}>
+                        <div
+                            ref={transitionRef}
+                            style={{ position: 'absolute', width: '100%' }}
+                        >
                             {isLoginView ? (
-                                <Login onSwitch={() => setIsLoginView(false)} />
+                                <Login onSwitch={handleSwitch} />
                             ) : (
-                                <Register onSwitch={() => setIsLoginView(true)} />
+                                <Register onSwitch={handleSwitch} />
                             )}
                         </div>
                     </CSSTransition>
