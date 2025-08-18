@@ -1,0 +1,92 @@
+// src/pages/Register.tsx
+
+import React, { useState, FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+// 1. Komponenta musí přijímat onSwitch
+interface RegisterProps {
+    onSwitch: () => void;
+}
+
+const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [formErrors, setFormErrors] = useState<any>({});
+    const { register, error, isLoading: authLoading } = useAuth();
+    const navigate = useNavigate();
+
+    const validateForm = (): boolean => {
+        const errors: any = {};
+        if (!username || username.length < 3) { errors.username = 'Username must be at least 3 characters'; }
+        if (!email || !/\S+@\S+\.\S+/.test(email)) { errors.email = 'Email is invalid'; }
+        if (!password || password.length < 6) { errors.password = 'Password must be at least 6 characters'; }
+        if (password !== confirmPassword) { errors.confirmPassword = 'Passwords do not match'; }
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        if (validateForm()) {
+            try {
+                // 2. Oprava chyby "void cannot be tested for truthiness"
+                await register(username, email, password);
+                navigate('/');
+            } catch (err) {
+                console.error("Registration attempt failed:", err);
+            }
+        }
+    };
+
+    return (
+        <>
+            <div className="auth-header">
+                <h2>Register</h2>
+                <p>Create a new account to get started.</p>
+            </div>
+            <form className="auth-form" onSubmit={handleSubmit} noValidate>
+                {/* Zbytek formuláře zůstává stejný */}
+                {error && <div className="auth-error">{error}</div>}
+                <div className="form-group">
+                    <label htmlFor="username">Username</label>
+                    <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className={formErrors.username ? 'input-error' : ''} disabled={authLoading} />
+                    {formErrors.username && <div className="error-message">{formErrors.username}</div>}
+                </div>
+                <div className="form-group">
+                    <label htmlFor="email">Email</label>
+                    <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className={formErrors.email ? 'input-error' : ''} disabled={authLoading} />
+                    {formErrors.email && <div className="error-message">{formErrors.email}</div>}
+                </div>
+                <div className="form-group">
+                    <label htmlFor="password">Password</label>
+                    <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className={formErrors.password ? 'input-error' : ''} disabled={authLoading} />
+                    {formErrors.password && <div className="error-message">{formErrors.password}</div>}
+                </div>
+                <div className="form-group">
+                    <label htmlFor="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={formErrors.confirmPassword ? 'input-error' : ''} disabled={authLoading} />
+                    {formErrors.confirmPassword && <div className="error-message">{formErrors.confirmPassword}</div>}
+                </div>
+                <div className="form-actions">
+                    <button type="submit" className="btn-primary btn-block" disabled={authLoading}>
+                        {authLoading ? 'Registering...' : 'Register'}
+                    </button>
+                </div>
+            </form>
+            <div className="auth-footer">
+                <p>
+                    Already have an account?{' '}
+                    {/* 3. Použijeme onSwitch pro přepnutí */}
+                    <a href="#" onClick={(e) => { e.preventDefault(); onSwitch(); }}>
+                        Login
+                    </a>
+                </p>
+            </div>
+        </>
+    );
+};
+
+export default Register;
