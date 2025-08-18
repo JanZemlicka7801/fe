@@ -46,11 +46,11 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
                 <h2>Login</h2>
                 <p>Welcome back! Please login to your account.</p>
             </div>
-            <form className="auth-form" onSubmit={handleSubmit} noValidate>
+            <form className="auth-form" onSubmit={handleSubmit} noValidate autoComplete="off">
                 {error && <div className="auth-error">{error}</div>}
                 <div className="form-group">
                     <label htmlFor="email">Email</label>
-                    <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className={formErrors.email ? 'input-error' : ''} disabled={authLoading} />
+                    <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" className={formErrors.email ? 'input-error' : ''} disabled={authLoading} />
                     {formErrors.email && <div className="error-message">{formErrors.email}</div>}
                 </div>
                 <div className="form-group">

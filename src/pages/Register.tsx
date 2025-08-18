@@ -113,7 +113,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
                 <h2>Register</h2>
                 <p>Create a new account to get started.</p>
             </div>
-            <form className="auth-form" onSubmit={handleSubmit} noValidate>
+            <form className="auth-form" onSubmit={handleSubmit} noValidate autoComplete="off">
                 {error && <div className="auth-error">{error}</div>}
 
                 <div className="form-group">
@@ -129,6 +129,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
                                 username: e.target.value.length < 3 ? 'Username must be at least 3 characters' : undefined
                             }));
                         }}
+                        autoComplete="off"
                         className={formErrors.username ? 'input-error' : ''}
                         disabled={authLoading}
                     />
@@ -145,6 +146,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
                             setEmail(e.target.value);
                             validateEmail(e.target.value);
                         }}
+                        autoComplete="off"
                         className={formErrors.email ? 'input-error' : ''}
                         disabled={authLoading}
                     />
@@ -169,6 +171,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
                             validatePassword(val);
                             validateConfirmPassword(confirmPassword, val);
                         }}
+                        autoComplete="off"
                         className={formErrors.password ? 'input-error' : ''}
                         disabled={authLoading}
                     />
@@ -204,6 +207,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
                             setConfirmPassword(val);
                             validateConfirmPassword(val, password);
                         }}
+                        autoComplete="off"
                         className={formErrors.confirmPassword ? 'input-error' : ''}
                         disabled={authLoading}
                     />
