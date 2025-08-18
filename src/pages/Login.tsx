@@ -1,10 +1,7 @@
-// src/pages/Login.tsx
-
 import React, { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-// 1. Komponenta musí přijímat onSwitch
 interface LoginProps {
     onSwitch: () => void;
 }
@@ -12,12 +9,14 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onSwitch }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [formErrors, setFormErrors] = useState<{ email?: string; password?: string }>({});
+    const [formErrors, setFormErrors] = useState<{
+        email?: string;
+        password?: string;
+    }>({});
     const { login, error, isLoading: authLoading } = useAuth();
     const navigate = useNavigate();
 
     const validateForm = (): boolean => {
-        // ... validace zůstává stejná
         const errors: any = {};
         if (!email || !/\S+@\S+\.\S+/.test(email)) {
             errors.email = 'Email is invalid';
@@ -33,14 +32,9 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
         e.preventDefault();
         if (validateForm()) {
             try {
-                // 2. Oprava chyby "void cannot be tested for truthiness"
-                // Funkce login nic nevrací. Pokud projde, pokračuje kód dál.
-                // Pokud selže, vyhodí chybu, kterou zachytí `catch`.
                 await login(email, password);
                 navigate('/');
             } catch (err) {
-                // AuthContext již nastavuje chybovou hlášku,
-                // takže zde můžeme chybu jen zalogovat pro ladění.
                 console.error("Login attempt failed:", err);
             }
         }
@@ -53,7 +47,6 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
                 <p>Welcome back! Please login to your account.</p>
             </div>
             <form className="auth-form" onSubmit={handleSubmit} noValidate>
-                {/* Zbytek formuláře zůstává stejný */}
                 {error && <div className="auth-error">{error}</div>}
                 <div className="form-group">
                     <label htmlFor="email">Email</label>
@@ -74,7 +67,6 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
             <div className="auth-footer">
                 <p>
                     Don't have an account?{' '}
-                    {/* 3. Použijeme onSwitch pro přepnutí */}
                     <a href="#" onClick={(e) => { e.preventDefault(); onSwitch(); }}>
                         Register
                     </a>

@@ -1,4 +1,3 @@
-// src/pages/AuthPage.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
 
@@ -22,12 +21,10 @@ const AuthPage: React.FC = () => {
         }
     }, []);
 
-    // Initial height
     useEffect(() => {
         updateCardHeight();
     }, []);
 
-    // Update height on view switch
     useEffect(() => {
         const timeout = setTimeout(updateCardHeight, 350); // wait for transition
         return () => clearTimeout(timeout);

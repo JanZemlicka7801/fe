@@ -1379,7 +1379,6 @@ main {
   background-color: rgba(var(--danger-rgb), 0.1);
 }
 
-/* Add RGB variables for rgba usage */
 :root {
   --primary-rgb: 67, 97, 238;
   --danger-rgb: 230, 57, 70;
@@ -1419,5 +1418,5 @@ main {
   width: 100%;
   max-width: 450px;
   overflow: hidden;
-  transition: height var(--transition-normal), box-shadow var(--transition-normal);
+  transition: height var(--transition-normal);
 }

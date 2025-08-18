@@ -1,10 +1,7 @@
-// src/pages/Register.tsx
-
 import React, { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-// 1. Komponenta musí přijímat onSwitch
 interface RegisterProps {
     onSwitch: () => void;
 }
@@ -14,7 +11,12 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [formErrors, setFormErrors] = useState<any>({});
+    const [formErrors, setFormErrors] = useState<{
+        username?: string;
+        email?: string;
+        password?: string;
+        confirmPassword?: string;
+    }>({});
     const { register, error, isLoading: authLoading } = useAuth();
     const navigate = useNavigate();
 
@@ -32,7 +34,6 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
         e.preventDefault();
         if (validateForm()) {
             try {
-                // 2. Oprava chyby "void cannot be tested for truthiness"
                 await register(username, email, password);
                 navigate('/');
             } catch (err) {
@@ -48,7 +49,6 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
                 <p>Create a new account to get started.</p>
             </div>
             <form className="auth-form" onSubmit={handleSubmit} noValidate>
-                {/* Zbytek formuláře zůstává stejný */}
                 {error && <div className="auth-error">{error}</div>}
                 <div className="form-group">
                     <label htmlFor="username">Username</label>
@@ -79,7 +79,6 @@ const Register: React.FC<RegisterProps> = ({ onSwitch }) => {
             <div className="auth-footer">
                 <p>
                     Already have an account?{' '}
-                    {/* 3. Použijeme onSwitch pro přepnutí */}
                     <a href="#" onClick={(e) => { e.preventDefault(); onSwitch(); }}>
                         Login
                     </a>
