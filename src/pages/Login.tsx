@@ -19,10 +19,10 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
     const validateForm = (): boolean => {
         const errors: any = {};
         if (!email || !/\S+@\S+\.\S+/.test(email)) {
-            errors.email = 'Email is invalid';
+            errors.email = 'Prosím vyplň správně email';
         }
         if (!password) {
-            errors.password = 'Password is required';
+            errors.password = 'Prosím vyplň správně heslo';
         }
         setFormErrors(errors);
         return Object.keys(errors).length === 0;
@@ -43,8 +43,8 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
     return (
         <>
             <div className="auth-header">
-                <h2>Login</h2>
-                <p>Welcome back! Please login to your account.</p>
+                <h2>Přihlášení</h2>
+                <p>Ahoj vítej zpět! Prosím přihlaš se.</p>
             </div>
             <form className="auth-form" onSubmit={handleSubmit} noValidate autoComplete="off">
                 {error && <div className="auth-error">{error}</div>}
@@ -54,22 +54,18 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
                     {formErrors.email && <div className="error-message">{formErrors.email}</div>}
                 </div>
                 <div className="form-group">
-                    <label htmlFor="password">Password</label>
+                    <label htmlFor="password">Heslo</label>
                     <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className={formErrors.password ? 'input-error' : ''} disabled={authLoading} />
                     {formErrors.password && <div className="error-message">{formErrors.password}</div>}
                 </div>
                 <div className="form-actions">
                     <button type="submit" className="btn-primary btn-block" disabled={authLoading}>
-                        {authLoading ? 'Logging in...' : 'Login'}
+                        {authLoading ? 'Přihlašuji...' : 'Přihlásit se'}
                     </button>
                 </div>
             </form>
             <div className="auth-footer">
                 <p>
-                    Don't have an account?{' '}
-                    <a href="#" onClick={(e) => { e.preventDefault(); onSwitch(); }}>
-                        Register
-                    </a>
                 </p>
             </div>
         </>
