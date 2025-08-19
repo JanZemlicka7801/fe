@@ -10,10 +10,10 @@ const AdminDashboard: React.FC = () => {
       
       <div className="admin-dashboard">
         <div className="admin-welcome">
-          <h2>Welcome, {user?.username}!</h2>
+          <h2>Welcome, {user?.learner.firstName} {user?.learner.lastName}!</h2>
           <p>This is the admin dashboard where you can manage the driving school system.</p>
         </div>
-        
+
         <div className="admin-stats">
           <div className="stats-card">
             <h3>Students</h3>

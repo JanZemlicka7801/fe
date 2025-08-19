@@ -44,7 +44,7 @@ const Schedule: React.FC<ScheduleProps> = ({ bookings, setBookings }) => {
     const handleSlotToggle = (dayStr: string, slotIndex: number) => {
         setBookings(prev => {
             const weekBookings = prev[currentWeekIndex] || {};
-            const dayBookings = weekBookings[dayStr] || Array(8).fill(false);
+            const dayBookings = weekBookings[dayStr] || Array(11).fill(false);
             dayBookings[slotIndex] = !dayBookings[slotIndex];
             return {
                 ...prev,
@@ -75,12 +75,12 @@ const Schedule: React.FC<ScheduleProps> = ({ bookings, setBookings }) => {
                 </button>
             </div>
 
-            <div className="row row-cols-1 row-cols-md-5 g-3">
+            <div className="row row-cols-1 row-cols-md-5 g-3 align-items-stretch">
                 {weeks[currentWeekIndex].map(day => (
-                    <div className="col" key={day.toDateString()}>
+                    <div className="col d-flex" key={day.toDateString()}>
                         <Day
                             date={day}
-                            dayBookings={(bookings[currentWeekIndex] || {})[day.toDateString()] || Array(8).fill(false)}
+                            dayBookings={(bookings[currentWeekIndex] || {})[day.toDateString()] || Array(11).fill(false)}
                             toggleSlot={handleSlotToggle}
                         />
                     </div>
