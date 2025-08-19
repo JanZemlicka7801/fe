@@ -1,5 +1,3 @@
-// App.tsx
-
 import React, { useState } from 'react';
 import {
     BrowserRouter as Router,
@@ -13,7 +11,7 @@ import Schedule from './Schedule';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Students from './pages/Students';
-import AuthPage from './pages/AuthPage'; // Imported as requested
+import AuthPage from './pages/AuthPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import Sidebar from './components/Sidebar';
@@ -34,9 +32,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 {!hideHeaderPaths.includes(location.pathname) && (
                     <header className="App-header">
                         <h1>
+                            {location.pathname === '/' && 'Driving School Class Scheduler'}
                             {location.pathname === '/profile' && 'Profile'}
                             {location.pathname === '/settings' && 'Settings'}
                             {location.pathname === '/students' && 'Students'}
+                            {location.pathname === '/admin' && 'Admin Dashboard'}
+                            {location.pathname === '/admin/users' && 'User Management'}
                         </h1>
                     </header>
                 )}
@@ -50,8 +51,17 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     const { isAuthenticated, isLoading } = useAuth();
 
     if (isLoading) return <div className="loading">Loading...</div>;
-    // Redirect to /auth instead of /login
     if (!isAuthenticated) return <Navigate to="/auth" replace />;
+
+    return <>{children}</>;
+};
+
+const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { isAuthenticated, isLoading, user } = useAuth();
+
+    if (isLoading) return <div className="loading">Loading...</div>;
+    if (!isAuthenticated) return <Navigate to="/auth" replace />;
+    if (!user || (user.role !== 'USER' && user.role !== 'ADMIN')) return <Navigate to="/" replace />;
 
     return <>{children}</>;
 };
@@ -66,44 +76,43 @@ function App() {
                     {/* Public route for authentication */}
                     <Route path="/auth" element={<AuthPage />} />
 
-                    {/* Protected routes */}
+                    {/* User-accessible routes (available to both USER and ADMIN) */}
                     <Route
                         path="/"
                         element={
-                            <ProtectedRoute>
+                            <UserRoute>
                                 <Layout>
-                                    <header className="App-header">
-                                        <h1>Driving School Class Scheduler</h1>
-                                    </header>
                                     <main className="container">
                                         <Schedule bookings={bookings} setBookings={setBookings} />
                                     </main>
                                 </Layout>
-                            </ProtectedRoute>
+                            </UserRoute>
                         }
                     />
                     <Route
                         path="/profile"
                         element={
-                            <ProtectedRoute>
+                            <UserRoute>
                                 <Layout><Profile /></Layout>
-                            </ProtectedRoute>
+                            </UserRoute>
                         }
                     />
                     <Route
                         path="/settings"
                         element={
-                            <ProtectedRoute>
+                            <UserRoute>
                                 <Layout><Settings /></Layout>
-                            </ProtectedRoute>
+                            </UserRoute>
                         }
                     />
+
+                    {/* Admin-only routes */}
                     <Route
                         path="/students"
                         element={
-                            <ProtectedRoute>
+                            <AdminRoute>
                                 <Layout><Students /></Layout>
-                            </ProtectedRoute>
+                            </AdminRoute>
                         }
                     />
                     <Route
@@ -122,8 +131,8 @@ function App() {
                             </AdminRoute>
                         }
                     />
-                    {/* Catch-all route */}
-                    <Route path="*" element={<Navigate to="/" />} />
+
+                    <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>
         </AuthProvider>
