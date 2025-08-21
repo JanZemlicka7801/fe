@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import LearnerManagement from "../LearnerManagement";
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -49,31 +50,15 @@ const AdminDashboard: React.FC = () => {
             <button className="btn-primary">View Logs</button>
           </div>
         </div>
-        
-        <div className="admin-recent">
-          <h3>Recent Activity</h3>
-          <div className="activity-list">
-            <div className="activity-item">
-              <div className="activity-time">Today, 10:23 AM</div>
-              <div className="activity-description">New student registration: Emma Johnson</div>
-            </div>
-            <div className="activity-item">
-              <div className="activity-time">Yesterday, 3:45 PM</div>
-              <div className="activity-description">Class schedule updated by Instructor Michael</div>
-            </div>
-            <div className="activity-item">
-              <div className="activity-time">Yesterday, 1:30 PM</div>
-              <div className="activity-description">Student William completed driving course</div>
-            </div>
-            <div className="activity-item">
-              <div className="activity-time">Aug 14, 9:15 AM</div>
-              <div className="activity-description">System maintenance performed</div>
-            </div>
-          </div>
+
+        <div className="admin-learners">
+          <h3>Manage Learners</h3>
+          <LearnerManagement />
         </div>
       </div>
     </div>
   );
 };
 
+// @ts-ignore
 export default AdminDashboard;
