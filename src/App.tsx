@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     BrowserRouter as Router,
     Routes,
@@ -7,7 +7,7 @@ import {
     useLocation
 } from 'react-router-dom';
 
-import Schedule from './Schedule';
+import Schedule from './pages/Schedule';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Students from './pages/Students';
@@ -67,8 +67,6 @@ const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 function App() {
-    const [bookings, setBookings] = useState({});
-
     return (
         <AuthProvider>
             <Router>
@@ -83,7 +81,7 @@ function App() {
                             <UserRoute>
                                 <Layout>
                                     <main className="container">
-                                        <Schedule bookings={bookings} setBookings={setBookings} />
+                                        <Schedule />
                                     </main>
                                 </Layout>
                             </UserRoute>

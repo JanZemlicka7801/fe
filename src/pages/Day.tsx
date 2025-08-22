@@ -1,32 +1,20 @@
 import React from 'react';
 import Slot from './Slot';
+import { slotTimes } from './utils';
 
 interface DayProps {
     date: Date;
     dayBookings: boolean[];
     toggleSlot: (dayStr: string, slotIndex: number) => void;
+    hasUserBooked: boolean[];
 }
 
-const Day: React.FC<DayProps> = ({ date, dayBookings, toggleSlot }) => {
+const Day: React.FC<DayProps> = ({ date, dayBookings, toggleSlot, hasUserBooked }) => {
     const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
     const dateShort = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const dateStr = date.toDateString();
 
-    const slotTimes = [
-        '8:00 AM',
-        '9:00 AM',
-        '10:00 AM',
-        '10:15 AM',
-        '11:15 AM',
-        '12:15 PM',
-        '12:45 PM',
-        '1:45 PM',
-        '2:45 PM',
-        '3:00 PM',
-        '4:00 PM'
-    ];
-
-    const breakIndexes = [2, 5, 8]; // indexes of break slots
+    const breakIndexes = [2, 5, 8];
 
     return (
         <div className="card h-100">
@@ -35,13 +23,14 @@ const Day: React.FC<DayProps> = ({ date, dayBookings, toggleSlot }) => {
                 <small className="text-muted">{dayName}</small>
             </div>
             <div className="card-body d-flex flex-column gap-2">
-                {slotTimes.map((time, idx) => (
+                {slotTimes.map((time, slotIndex) => (
                     <Slot
-                        key={idx}
+                        key={slotIndex}
                         time={time}
-                        isBooked={dayBookings[idx]}
-                        isBreak={breakIndexes.includes(idx)}
-                        onClick={() => toggleSlot(dateStr, idx)}
+                        isBooked={dayBookings[slotIndex]}
+                        isBreak={breakIndexes.includes(slotIndex)}
+                        onClick={() => toggleSlot(dateStr, slotIndex)}
+                        hasUserBooked={hasUserBooked[slotIndex]}
                     />
                 ))}
             </div>
