@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   fetchStudents,
   addStudent,
-  deleteStudent, // <-- IMPORTED HERE
+  deleteStudent,
   StudentCreateDTO
 } from '../services/StudentService';
 import AddStudentModal from '../components/AddStudentModal';
@@ -45,7 +45,20 @@ const Students: React.FC = () => {
       setError(null);
       try {
         const data = await fetchStudents(token);
-        setStudents(data);
+
+        const studentsWithStatus = data.map((student: Omit<Student, 'status'>) => {
+          let status: Student['status'];
+          if (student.progress === 100) {
+            status = 'completed';
+          } else if (!student.nextLesson) {
+            status = 'inactive';
+          } else {
+            status = 'active';
+          }
+          return { ...student, status };
+        });
+
+        setStudents(studentsWithStatus);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -56,6 +69,15 @@ const Students: React.FC = () => {
     getStudents();
   }, [token]);
 
+  const filteredStudents = students.filter(student => {
+    const matchesSearch =
+        (student?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (student?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   const handleAddStudentSubmit = async (studentData: StudentCreateDTO) => {
     if (!token) {
       setAddStudentError("Authentication token not available.");
@@ -65,21 +87,22 @@ const Students: React.FC = () => {
     setAddStudentError(null);
     try {
       const addedStudent = await addStudent(studentData, token);
-      setStudents(prevStudents => [...prevStudents, addedStudent]);
+
+      let status: Student['status'];
+      if (addedStudent.progress === 100) {
+        status = 'completed';
+      } else if (!addedStudent.nextLesson) {
+        status = 'inactive';
+      } else {
+        status = 'active';
+      }
+
+      setStudents(prevStudents => [...prevStudents, { ...addedStudent, status }]);
       setIsAddModalOpen(false);
     } catch (err: any) {
       setAddStudentError(err.message);
     }
   };
-
-  const filteredStudents = students.filter(student => {
-    const matchesSearch =
-        (student?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (student?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   const handleStudentClick = (student: Student) => {
     setSelectedStudent(student);
