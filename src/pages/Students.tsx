@@ -1,10 +1,16 @@
-// Students.tsx
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchStudents } from '../services/StudentService';
+import {
+  fetchStudents,
+  addStudent,
+  deleteStudent, // <-- IMPORTED HERE
+  StudentCreateDTO
+} from '../services/StudentService';
+import AddStudentModal from '../components/AddStudentModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 export interface Student {
+  id: string;
   name: string;
   email: string;
   phone: string;
@@ -15,13 +21,17 @@ export interface Student {
 }
 
 const Students: React.FC = () => {
-  const { isAdmin, token } = useAuth(); // Destructure token from useAuth
+  const { isAdmin, token } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addStudentError, setAddStudentError] = useState<string | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   useEffect(() => {
     const getStudents = async () => {
@@ -34,7 +44,7 @@ const Students: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await fetchStudents(token); // Pass the token to the service function
+        const data = await fetchStudents(token);
         setStudents(data);
       } catch (err: any) {
         setError(err.message);
@@ -44,11 +54,29 @@ const Students: React.FC = () => {
     };
 
     getStudents();
-  }, [token]); // Add token to the dependency array to refetch if it changes
+  }, [token]);
+
+  const handleAddStudentSubmit = async (studentData: StudentCreateDTO) => {
+    if (!token) {
+      setAddStudentError("Authentication token not available.");
+      return;
+    }
+
+    setAddStudentError(null);
+    try {
+      const addedStudent = await addStudent(studentData, token);
+      setStudents(prevStudents => [...prevStudents, addedStudent]);
+      setIsAddModalOpen(false);
+    } catch (err: any) {
+      setAddStudentError(err.message);
+    }
+  };
 
   const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+        (student?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (student?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -59,6 +87,30 @@ const Students: React.FC = () => {
 
   const closeStudentDetails = () => {
     setSelectedStudent(null);
+  };
+
+  const handleDeleteClick = (student: Student) => {
+    setStudentToDelete(student);
+    setIsConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!token || !studentToDelete) return;
+
+    try {
+      await deleteStudent(studentToDelete.id, token);
+      setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
+    } catch (error: any) {
+      alert(`Error deleting student: ${error.message}`);
+    } finally {
+      setStudentToDelete(null);
+      setIsConfirmOpen(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsConfirmOpen(false);
+    setStudentToDelete(null);
   };
 
   if (isLoading) {
@@ -73,13 +125,11 @@ const Students: React.FC = () => {
       <div className="page-container">
         <h1 className="page-title">Students</h1>
 
-        {/* Role-specific header */}
-        {isAdmin && (
+        {isAdmin ? (
             <div className="role-indicator admin">
               <span>Administrator View - Full Management Access</span>
             </div>
-        )}
-        {!isAdmin && (
+        ) : (
             <div className="role-indicator user">
               <span>User View - Limited Access</span>
             </div>
@@ -111,12 +161,26 @@ const Students: React.FC = () => {
           {isAdmin && (
               <button
                   className="btn-primary"
-                  onClick={() => { /* Add logic for add modal here */ }}
+                  onClick={() => setIsAddModalOpen(true)}
               >
                 Add New Student
               </button>
           )}
         </div>
+
+        <ConfirmModal
+            isOpen={isConfirmOpen}
+            message={`Are you sure you want to delete ${studentToDelete?.name || 'this student'}?`}
+            onConfirm={confirmDelete}
+            onCancel={cancelDelete}
+        />
+
+        <AddStudentModal
+            isOpen={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onSubmit={handleAddStudentSubmit}
+            submitError={addStudentError}
+        />
 
         <div className="students-table-container">
           <table className="students-table">
@@ -129,16 +193,17 @@ const Students: React.FC = () => {
               <th>Status</th>
               <th>Last Lesson</th>
               <th>Next Lesson</th>
+              {isAdmin && <th>Actions</th>}
             </tr>
             </thead>
             <tbody>
             {filteredStudents.length > 0 ? (
                 filteredStudents.map((student, index) => (
-                    <tr key={index} onClick={() => handleStudentClick(student)}>
-                      <td>{student.name}</td>
-                      <td>{student.email}</td>
-                      <td>{student.phone}</td>
-                      <td>
+                    <tr key={index}>
+                      <td onClick={() => handleStudentClick(student)}>{student.name}</td>
+                      <td onClick={() => handleStudentClick(student)}>{student.email}</td>
+                      <td onClick={() => handleStudentClick(student)}>{student.phone}</td>
+                      <td onClick={() => handleStudentClick(student)}>
                         <div className="progress-bar-container">
                           <div
                               className="progress-bar"
@@ -147,18 +212,36 @@ const Students: React.FC = () => {
                           <span>{student.progress}%</span>
                         </div>
                       </td>
-                      <td>
-                    <span className={`status-badge ${student.status}`}>
-                      {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                    </span>
+                      <td onClick={() => handleStudentClick(student)}>
+              <span className={`status-badge ${student.status || ''}`}>
+                {(student.status || '').charAt(0).toUpperCase() +
+                    (student.status || '').slice(1)}
+              </span>
                       </td>
-                      <td>{student.lastLesson || 'N/A'}</td>
-                      <td>{student.nextLesson || 'N/A'}</td>
+                      <td onClick={() => handleStudentClick(student)}>
+                        {student.lastLesson || 'N/A'}
+                      </td>
+                      <td onClick={() => handleStudentClick(student)}>
+                        {student.nextLesson || 'N/A'}
+                      </td>
+
+                      {isAdmin && (
+                          <td>
+                            <button
+                                className="btn-danger"
+                                onClick={() => handleDeleteClick(student)}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                      )}
                     </tr>
                 ))
             ) : (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center' }}>No students found.</td>
+                  <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center' }}>
+                    No students found.
+                  </td>
                 </tr>
             )}
             </tbody>

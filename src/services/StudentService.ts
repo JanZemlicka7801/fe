@@ -29,6 +29,19 @@ export const fetchStudents = async (token: string): Promise<Student[]> => {
     }
 };
 
+export const deleteStudent = async (id: string, token: string): Promise<void> => {
+    const response = await fetch(`/api/students/${id}`, {
+        method: 'DELETE',
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to delete student');
+    }
+};
+
 export const addStudent = async (studentData: StudentCreateDTO, token: string): Promise<Student> => {
     try {
         const response = await fetch('/api/students', {
