@@ -4,7 +4,7 @@ import {
   fetchStudents,
   addStudent,
   deleteStudent,
-  StudentCreateDTO
+  StudentCreateDTO, fetchUsersByRoles, AppUser
 } from '../services/StudentService';
 import AddStudentModal from '../components/AddStudentModal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -29,44 +29,38 @@ const Students: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [addStudentError, setAddStudentError] = useState<string | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   useEffect(() => {
-    const getStudents = async () => {
-      if (!token) {
-        setError("Authentication token not available.");
-        setIsLoading(false);
-        return;
-      }
+    if (!token) {
+      setError("Authentication token not available.");
+      setIsLoading(false);
+      return;
+    }
 
+    let cancelled = false;
+    (async () => {
       setIsLoading(true);
       setError(null);
       try {
         const data = await fetchStudents(token);
-
-        const studentsWithStatus = data.map((student: Omit<Student, 'status'>) => {
-          let status: Student['status'];
-          if (student.progress === 100) {
-            status = 'completed';
-          } else if (!student.nextLesson) {
-            status = 'inactive';
-          } else {
-            status = 'active';
-          }
-          return { ...student, status };
+        const studentsWithStatus: Student[] = data.map((s) => {
+          const status: Student['status'] =
+              s.progress === 100 ? 'completed' : (!s.nextLesson ? 'inactive' : 'active');
+          return { ...s, status };
         });
-
-        setStudents(studentsWithStatus);
+        if (!cancelled) setStudents(studentsWithStatus);
       } catch (err: any) {
-        setError(err.message);
+        if (!cancelled) setError(err.message);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
-    };
+    })();
 
-    getStudents();
+    return () => { cancelled = true; };
   }, [token]);
 
   const filteredStudents = students.filter(student => {
@@ -103,6 +97,13 @@ const Students: React.FC = () => {
       setAddStudentError(err.message);
     }
   };
+
+  useEffect(() => {
+    if (!token) { setUsers([]); return; }
+    fetchUsersByRoles(token)
+        .then(setUsers)
+        .catch((e) => console.error(e));
+  }, [token]);
 
   const handleStudentClick = (student: Student) => {
     setSelectedStudent(student);

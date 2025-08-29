@@ -1,68 +1,93 @@
-import { Student } from '../pages/Students';
+import {apiFetch, HttpError} from './api';
 
-export interface StudentCreateDTO {
+export type StudentCreateDTO = {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+};
+
+export type Student = {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    progress: number;
+    lastLesson: string | null;
+    nextLesson: string | null;
+};
+
+type LearnerUserCreateResponseDTO = {
+    learnerId: string;
     firstName: string;
     lastName: string;
     email: string;
-    phoneNumber: string;
-    lessons: number;
+    phone: string;
+    lessonsRemaining: number;
+    userId: string;
+    username: string;
+    validated: boolean;
+    role: 'LEARNER';
+    createdAt: string;
+    tempPassword: string;
+};
+
+export async function fetchStudents(token: string): Promise<Student[]> {
+    return apiFetch<Student[]>('/api/learners', {
+        headers: { Authorization: `Bearer ${token}` },
+    });
 }
 
-export const fetchStudents = async (token: string): Promise<Student[]> => {
+export async function addStudent(dto: StudentCreateDTO, token: string): Promise<Student> {
     try {
-        const response = await fetch('/api/students', {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch students: ${response.status} ${response.statusText}. Details: ${errorText}`);
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error("Error fetching students:", error);
-        throw error;
-    }
-};
-
-export const deleteStudent = async (id: string, token: string): Promise<void> => {
-    const response = await fetch(`/api/students/${id}`, {
-        method: 'DELETE',
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to delete student');
-    }
-};
-
-export const addStudent = async (studentData: StudentCreateDTO, token: string): Promise<Student> => {
-    try {
-        const response = await fetch('/api/students', {
+        const res = await apiFetch<LearnerUserCreateResponseDTO>('/api/learners', {
             method: 'POST',
-            mode: 'cors',
             headers: {
+                Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`
             },
-            body: JSON.stringify(studentData)
+            body: JSON.stringify(dto),
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to add student: ${response.status} ${response.statusText}. Details: ${errorText}`);
+        return {
+            id: res.learnerId,
+            name: `${res.firstName} ${res.lastName}`,
+            email: res.email,
+            phone: res.phone,
+            progress: 0,
+            lastLesson: null,
+            nextLesson: null,
+        };
+    } catch (err: any) {
+        if (err instanceof HttpError && err.status === 409) {
+            throw new Error('Email must be unique. This email is already in use.');
         }
-
-        const addedStudent = await response.json();
-        return addedStudent;
-    } catch (error) {
-        console.error("Error adding student:", error);
-        throw error;
+        throw err;
     }
+}
+
+export type AppUser = {
+    id: string;
+    username: string;
+    email: string;
+    validated: boolean;
+    role: 'LEARNER' | 'INSTRUCTOR' | 'ADMIN';
+    createdAt: string;
 };
+
+export async function fetchUsersByRoles(
+    token: string,
+    roles: Array<'LEARNER' | 'INSTRUCTOR'> = ['LEARNER', 'INSTRUCTOR'],
+): Promise<AppUser[]> {
+    const qs = `roles=${roles.join(',')}`;
+    return apiFetch<AppUser[]>(`/api/users?${qs}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+}
+
+export async function deleteStudent(learnerId: string, token: string): Promise<void> {
+    return apiFetch<void>(`/api/learners/${learnerId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+    });
+}

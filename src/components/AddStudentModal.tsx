@@ -1,47 +1,45 @@
 import React, { useState } from 'react';
-import { StudentCreateDTO } from '../services/StudentService';
+import { StudentCreateDTO } from '../pages/utils';
+import { addStudent } from '../services/StudentService';
+import { HttpError } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AddStudentModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (studentData: StudentCreateDTO) => void;
-    submitError: string | null;
+    onSubmit: (studentData: StudentCreateDTO) => void; // keep as success callback
+    submitError: string | null; // kept for compatibility but unused
 }
+
+const FIELDS = ['firstName', 'lastName', 'email', 'phone'] as const;
 
 const AddStudentModal: React.FC<AddStudentModalProps> = ({
                                                              isOpen,
                                                              onClose,
                                                              onSubmit,
-                                                             submitError,
                                                          }) => {
+    const { token } = useAuth();
     const [newStudent, setNewStudent] = useState<StudentCreateDTO>({
         firstName: '',
         lastName: '',
         email: '',
-        phoneNumber: '',
-        lessons: 0,
+        phone: '',
     });
-
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [error, setError] = useState<string | null>(null);
 
     if (!isOpen) return null;
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setNewStudent((prev) => ({
-            ...prev,
-            [name]: name === 'lessons' ? parseInt(value) : value,
-        }));
-        setFormErrors((prev) => {
-            const newErrors = { ...prev };
-            delete newErrors[name];
-            return newErrors;
-        });
+        setNewStudent(prev => ({ ...prev, [name]: value }));
+        setFormErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+        setError(null);
     };
 
     const validateForm = () => {
         const errors: Record<string, string> = {};
-        const phone = newStudent.phoneNumber.trim().replace(/\s+/g, '');
+        const phone = newStudent.phone.trim().replace(/\s+/g, '');
         if (!newStudent.firstName.trim()) errors.firstName = 'First Name is required.';
         if (!newStudent.lastName.trim()) errors.lastName = 'Last Name is required.';
         if (!newStudent.email.trim()) {
@@ -50,64 +48,53 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
             errors.email = 'Invalid email format.';
         }
         if (!phone) {
-            errors.phoneNumber = 'Phone number is required.';
+            errors.phone = 'Phone number is required.';
         } else if (!/^(?:(\+|00)?420)?\d{9}$/.test(phone)) {
-            errors.phoneNumber = 'Invalid Czech phone number.';
+            errors.phone = 'Invalid Czech phone number.';
         }
-        if (isNaN(newStudent.lessons) || newStudent.lessons < 0) {
-            errors.lessons = 'Lessons must be a non-negative number.';
-        }
-
         setFormErrors(errors);
         return Object.keys(errors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (validateForm()) {
-            onSubmit(newStudent);
-            setNewStudent({
-                firstName: '',
-                lastName: '',
-                email: '',
-                phoneNumber: '',
-                lessons: 0,
-            });
-            setFormErrors({});
+        if (!validateForm()) return;
+
+        if (!token) {
+            setError("You are not logged in.");
+            return;
+        }
+
+        try {
+            await addStudent(newStudent, token);
+            setError(null);
+            onSubmit(newStudent); // notify parent on success
+            setNewStudent({ firstName: '', lastName: '', email: '', phone: '' });
+            onClose();
+        } catch (e: any) {
+            if (e instanceof HttpError && e.status === 409) {
+                setError('Email must be unique. This email is already in use.');
+                return;
+            }
+            setError('Failed to create student.');
         }
     };
 
     const modalStyles: React.CSSProperties = {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        zIndex: 9999,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex',
+        justifyContent: 'center', alignItems: 'center',
     };
 
     const modalBoxStyles: React.CSSProperties = {
-        backgroundColor: '#fff',
-        padding: '2rem',
-        borderRadius: '8px',
-        width: '100%',
-        maxWidth: '500px',
-        position: 'relative',
+        backgroundColor: '#fff', padding: '2rem', borderRadius: '8px',
+        width: '100%', maxWidth: '500px', position: 'relative',
         boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
     };
 
     const closeButtonStyles: React.CSSProperties = {
-        position: 'absolute',
-        top: '10px',
-        right: '15px',
-        fontSize: '1.5rem',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
+        position: 'absolute', top: '10px', right: '15px',
+        fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer',
     };
 
     return (
@@ -118,21 +105,19 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
                 </button>
                 <h2 style={{ marginBottom: '1rem' }}>Add New Student</h2>
 
-                {submitError && (
-                    <div style={{ color: 'red', marginBottom: '1rem' }}>{submitError}</div>
-                )}
+                {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
 
                 <form onSubmit={handleSubmit}>
-                    {['firstName', 'lastName', 'email', 'phoneNumber', 'lessons'].map((field) => (
+                    {FIELDS.map((field) => (
                         <div key={field} style={{ marginBottom: '1rem' }}>
                             <label htmlFor={field} style={{ display: 'block', marginBottom: '0.5rem' }}>
                                 {field.charAt(0).toUpperCase() + field.slice(1)}:
                             </label>
                             <input
-                                type={field === 'lessons' ? 'number' : 'text'}
+                                type="text"
                                 id={field}
                                 name={field}
-                                value={(newStudent as any)[field]}
+                                value={(newStudent as any)[field] ?? ''}
                                 onChange={handleInputChange}
                                 style={{
                                     width: '100%',
