@@ -20,7 +20,6 @@ export const slotTimes = [
 export const getMonday = (date: Date): Date => {
     const d = new Date(date);
     const day = d.getDay();
-    // Adjusts the date to get to Monday. day=0 is Sunday, so it needs special handling.
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setDate(diff));
 };
@@ -42,25 +41,36 @@ export const generateWeeks = (): Date[][] => {
             weekDays.push(day);
         }
         weeks.push(weekDays);
-        monday.setDate(monday.getDate() + 7); // Move to the next week
+        monday.setDate(monday.getDate() + 7);
     }
 
     return weeks;
 };
 
 export interface BookingPayload {
-    time: string;
     date: string;
-    groupName: string;
+    teacher: string;
+    car: string;
     learnerId: string;
 }
 
 export interface Booking {
     id: string;
-    time: string;
     date: string;
-    groupName: string;
+    teacher: string;
+    car: string;
     learnerId: string;
+    learnerFirstName: string;
+    learnerLastName: string;
+}
+
+export interface StudentCreateDTO {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
 }
 
 export type BookedClassesResponse = Booking[];
+
+export const ADMIN_LEARNER_ID = '00000000-0000-0000-0000-000000000000';

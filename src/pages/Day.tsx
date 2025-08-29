@@ -1,18 +1,19 @@
 import React from 'react';
 import Slot from './Slot';
 import { slotTimes } from './utils';
+import { Booking } from './utils';
 
 interface DayProps {
     date: Date;
-    dayBookings: boolean[];
+    dayBookings: (Booking | null)[];
     toggleSlot: (dayStr: string, slotIndex: number) => void;
-    hasUserBooked: boolean[];
 }
 
-const Day: React.FC<DayProps> = ({ date, dayBookings, toggleSlot, hasUserBooked }) => {
+const Day: React.FC<DayProps> = ({ date, dayBookings, toggleSlot }) => {
     const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
     const dateShort = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const dateStr = date.toDateString();
+    const isPastDay = date.getTime() < Date.now();
 
     const breakIndexes = [2, 5, 8];
 
@@ -27,10 +28,9 @@ const Day: React.FC<DayProps> = ({ date, dayBookings, toggleSlot, hasUserBooked 
                     <Slot
                         key={slotIndex}
                         time={time}
-                        isBooked={dayBookings[slotIndex]}
+                        slotBooking={dayBookings[slotIndex]}
                         isBreak={breakIndexes.includes(slotIndex)}
-                        onClick={() => toggleSlot(dateStr, slotIndex)}
-                        hasUserBooked={hasUserBooked[slotIndex]}
+                        onClick={() => !isPastDay && toggleSlot(dateStr, slotIndex)}
                     />
                 ))}
             </div>
