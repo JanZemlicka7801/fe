@@ -58,10 +58,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, isLoading, user } = useAuth();
-
     if (isLoading) return <div className="loading">Loading...</div>;
     if (!isAuthenticated) return <Navigate to="/auth" replace />;
-    if (!user || (user.role !== 'USER' && user.role !== 'ADMIN')) return <Navigate to="/" replace />;
+
+    const allowed: Array<'LEARNER' | 'INSTRUCTOR' | 'ADMIN'> = ['LEARNER','INSTRUCTOR','ADMIN'];
+    if (!user || !allowed.includes(user.role)) return <Navigate to="/auth" replace />;
 
     return <>{children}</>;
 };
