@@ -15,6 +15,20 @@ export type Student = {
     progress: number;
     lastLesson: string | null;
     nextLesson: string | null;
+    status: 'active' | 'inactive' | 'completed';
+};
+
+type StudentPayload = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    phoneNumber: string | null;
+    lessons: number;
+    pastClassesCount: number;
+    previousClass: string | null;
+    nextClass: string | null;
+    validated: boolean;                 // <- must be present
 };
 
 type LearnerUserCreateResponseDTO = {
@@ -32,38 +46,42 @@ type LearnerUserCreateResponseDTO = {
     tempPassword: string;
 };
 
+const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : null);
+
 export async function fetchStudents(token: string): Promise<Student[]> {
-    return apiFetch<Student[]>('/api/learners', {
+    const rows = await apiFetch<StudentPayload[]>('/api/learners', {
         headers: { Authorization: `Bearer ${token}` },
     });
+
+    return rows.map(r => ({
+        id: r.id,
+        name: `${r.firstName} ${r.lastName}`.trim(),
+        email: r.email ?? '',
+        phone: r.phoneNumber ?? '',
+        progress: r.lessons ? Math.round((r.pastClassesCount / r.lessons) * 100) : 0,
+        status: r.validated ? 'active' : 'inactive',     // ← lowercase
+        lastLesson: fmt(r.previousClass),
+        nextLesson: fmt(r.nextClass),
+    }));
 }
 
 export async function addStudent(dto: StudentCreateDTO, token: string): Promise<Student> {
-    try {
-        const res = await apiFetch<LearnerUserCreateResponseDTO>('/api/learners', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(dto),
-        });
+    const res = await apiFetch<LearnerUserCreateResponseDTO>('/api/learners', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(dto),
+    });
 
-        return {
-            id: res.learnerId,
-            name: `${res.firstName} ${res.lastName}`,
-            email: res.email,
-            phone: res.phone,
-            progress: 0,
-            lastLesson: null,
-            nextLesson: null,
-        };
-    } catch (err: any) {
-        if (err instanceof HttpError && err.status === 409) {
-            throw new Error('Email must be unique. This email is already in use.');
-        }
-        throw err;
-    }
+    return {
+        id: res.learnerId,
+        name: `${res.firstName} ${res.lastName}`,
+        email: res.email,
+        phone: res.phone,
+        progress: 0,
+        lastLesson: null,
+        nextLesson: null,
+        status: res.validated ? 'active' : 'inactive',   // ← add
+    };
 }
 
 export type AppUser = {

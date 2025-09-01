@@ -4,21 +4,13 @@ import {
   fetchStudents,
   addStudent,
   deleteStudent,
-  StudentCreateDTO, fetchUsersByRoles, AppUser
+  fetchUsersByRoles,
+  type Student,            // ← use the service’s Student type
+  type StudentCreateDTO,
+  type AppUser,
 } from '../services/StudentService';
 import AddStudentModal from '../components/AddStudentModal';
 import ConfirmModal from '../components/ConfirmModal';
-
-export interface Student {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  progress: number;
-  status: 'active' | 'inactive' | 'completed';
-  lastLesson: string | null;
-  nextLesson: string | null;
-}
 
 const Students: React.FC = () => {
   const { isAdmin, token } = useAuth();
@@ -26,7 +18,7 @@ const Students: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | Student['status']>('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -36,62 +28,46 @@ const Students: React.FC = () => {
 
   useEffect(() => {
     if (!token) {
-      setError("Authentication token not available.");
+      setError('Authentication token not available.');
       setIsLoading(false);
       return;
     }
-
     let cancelled = false;
     (async () => {
       setIsLoading(true);
       setError(null);
       try {
         const data = await fetchStudents(token);
-        const studentsWithStatus: Student[] = data.map((s) => {
-          const status: Student['status'] =
-              s.progress === 100 ? 'completed' : (!s.nextLesson ? 'inactive' : 'active');
-          return { ...s, status };
-        });
-        if (!cancelled) setStudents(studentsWithStatus);
+        if (!cancelled) setStudents(data);  // ← do not recompute status here
       } catch (err: any) {
         if (!cancelled) setError(err.message);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     })();
-
     return () => { cancelled = true; };
   }, [token]);
 
-  const filteredStudents = students.filter(student => {
+  const filteredStudents = students.filter((student) => {
     const matchesSearch =
         (student?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (student?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-
     const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const handleAddStudentSubmit = async (studentData: StudentCreateDTO) => {
     if (!token) {
-      setAddStudentError("Authentication token not available.");
+      setAddStudentError('Authentication token not available.');
       return;
     }
-
     setAddStudentError(null);
     try {
-      const addedStudent = await addStudent(studentData, token);
-
-      let status: Student['status'];
-      if (addedStudent.progress === 100) {
-        status = 'completed';
-      } else if (!addedStudent.nextLesson) {
-        status = 'inactive';
-      } else {
-        status = 'active';
-      }
-
-      setStudents(prevStudents => [...prevStudents, { ...addedStudent, status }]);
+      const added = await addStudent(studentData, token);
+      // Keep status from API; if not provided, derive from validated.
+      const status: Student['status'] =
+          added.status ?? (added as any).validated ? 'active' : 'inactive';
+      setStudents((prev) => [...prev, { ...added, status }]);
       setIsAddModalOpen(false);
     } catch (err: any) {
       setAddStudentError(err.message);
@@ -100,18 +76,11 @@ const Students: React.FC = () => {
 
   useEffect(() => {
     if (!token) { setUsers([]); return; }
-    fetchUsersByRoles(token)
-        .then(setUsers)
-        .catch((e) => console.error(e));
+    fetchUsersByRoles(token).then(setUsers).catch(console.error);
   }, [token]);
 
-  const handleStudentClick = (student: Student) => {
-    setSelectedStudent(student);
-  };
-
-  const closeStudentDetails = () => {
-    setSelectedStudent(null);
-  };
+  const handleStudentClick = (student: Student) => setSelectedStudent(student);
+  const closeStudentDetails = () => setSelectedStudent(null);
 
   const handleDeleteClick = (student: Student) => {
     setStudentToDelete(student);
@@ -120,10 +89,9 @@ const Students: React.FC = () => {
 
   const confirmDelete = async () => {
     if (!token || !studentToDelete) return;
-
     try {
       await deleteStudent(studentToDelete.id, token);
-      setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
+      setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
     } catch (error: any) {
       alert(`Error deleting student: ${error.message}`);
     } finally {
@@ -137,26 +105,17 @@ const Students: React.FC = () => {
     setStudentToDelete(null);
   };
 
-  if (isLoading) {
-    return <div className="page-container"><p>Loading students...</p></div>;
-  }
-
-  if (error) {
-    return <div className="page-container"><p className="error-message">Error: {error}</p></div>;
-  }
+  if (isLoading) return <div className="page-container"><p>Loading students...</p></div>;
+  if (error) return <div className="page-container"><p className="error-message">Error: {error}</p></div>;
 
   return (
       <div className="page-container">
         <h1 className="page-title">Students</h1>
 
         {isAdmin ? (
-            <div className="role-indicator admin">
-              <span>Administrator View - Full Management Access</span>
-            </div>
+            <div className="role-indicator admin"><span>Administrator View - Full Management Access</span></div>
         ) : (
-            <div className="role-indicator user">
-              <span>User View - Limited Access</span>
-            </div>
+            <div className="role-indicator user"><span>User View - Limited Access</span></div>
         )}
 
         <div className="students-controls">
@@ -173,20 +132,16 @@ const Students: React.FC = () => {
             <label>Status:</label>
             <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
             >
               <option value="all">All</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
-              <option value="completed">Completed</option>
             </select>
           </div>
 
           {isAdmin && (
-              <button
-                  className="btn-primary"
-                  onClick={() => setIsAddModalOpen(true)}
-              >
+              <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
                 Add New Student
               </button>
           )}
@@ -210,63 +165,38 @@ const Students: React.FC = () => {
           <table className="students-table">
             <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Progress</th>
-              <th>Status</th>
-              <th>Last Lesson</th>
-              <th>Next Lesson</th>
+              <th>Name</th><th>Email</th><th>Phone</th><th>Progress</th>
+              <th>Status</th><th>Last Lesson</th><th>Next Lesson</th>
               {isAdmin && <th>Actions</th>}
             </tr>
             </thead>
             <tbody>
-            {filteredStudents.length > 0 ? (
-                filteredStudents.map((student, index) => (
-                    <tr key={index}>
-                      <td onClick={() => handleStudentClick(student)}>{student.name}</td>
-                      <td onClick={() => handleStudentClick(student)}>{student.email}</td>
-                      <td onClick={() => handleStudentClick(student)}>{student.phone}</td>
-                      <td onClick={() => handleStudentClick(student)}>
-                        <div className="progress-bar-container">
-                          <div
-                              className="progress-bar"
-                              style={{ width: `${student.progress}%` }}
-                          ></div>
-                          <span>{student.progress}%</span>
-                        </div>
-                      </td>
-                      <td onClick={() => handleStudentClick(student)}>
-              <span className={`status-badge ${student.status || ''}`}>
-                {(student.status || '').charAt(0).toUpperCase() +
-                    (student.status || '').slice(1)}
-              </span>
-                      </td>
-                      <td onClick={() => handleStudentClick(student)}>
-                        {student.lastLesson || 'N/A'}
-                      </td>
-                      <td onClick={() => handleStudentClick(student)}>
-                        {student.nextLesson || 'N/A'}
-                      </td>
-
-                      {isAdmin && (
-                          <td>
-                            <button
-                                className="btn-danger"
-                                onClick={() => handleDeleteClick(student)}
-                            >
-                              Delete
-                            </button>
-                          </td>
-                      )}
-                    </tr>
-                ))
-            ) : (
-                <tr>
-                  <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center' }}>
-                    No students found.
+            {filteredStudents.length > 0 ? filteredStudents.map((student) => (
+                <tr key={student.id}>
+                  <td onClick={() => handleStudentClick(student)}>{student.name}</td>
+                  <td onClick={() => handleStudentClick(student)}>{student.email}</td>
+                  <td onClick={() => handleStudentClick(student)}>{student.phone}</td>
+                  <td onClick={() => handleStudentClick(student)}>
+                    <div className="progress-bar-container">
+                      <div className="progress-bar" style={{ width: `${student.progress}%` }} />
+                      <span>{student.progress}%</span>
+                    </div>
                   </td>
+                  <td onClick={() => handleStudentClick(student)}>
+                    <span className={`status-badge ${student.status}`}>
+                      {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                    </span>
+                  </td>
+                  <td onClick={() => handleStudentClick(student)}>{student.lastLesson || 'N/A'}</td>
+                  <td onClick={() => handleStudentClick(student)}>{student.nextLesson || 'N/A'}</td>
+                  {isAdmin && (
+                      <td>
+                        <button className="btn-danger" onClick={() => handleDeleteClick(student)}>Delete</button>
+                      </td>
+                  )}
                 </tr>
+            )) : (
+                <tr><td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center' }}>No students found.</td></tr>
             )}
             </tbody>
           </table>
@@ -283,37 +213,20 @@ const Students: React.FC = () => {
                   <div className="student-info">
                     <div className="info-group">
                       <h3>Contact Information</h3>
-                      <div className="info-item">
-                        <span className="info-label">Email:</span>
-                        <span className="info-value">{selectedStudent.email}</span>
-                      </div>
-                      <div className="info-item">
-                        <span className="info-label">Phone:</span>
-                        <span className="info-value">{selectedStudent.phone}</span>
-                      </div>
+                      <div className="info-item"><span className="info-label">Email:</span><span className="info-value">{selectedStudent.email}</span></div>
+                      <div className="info-item"><span className="info-label">Phone:</span><span className="info-value">{selectedStudent.phone}</span></div>
                     </div>
-
                     <div className="info-group">
                       <h3>Progress</h3>
                       <div className="progress-bar-container large">
-                        <div
-                            className="progress-bar"
-                            style={{ width: `${selectedStudent.progress}%` }}
-                        ></div>
+                        <div className="progress-bar" style={{ width: `${selectedStudent.progress}%` }} />
                         <span>{selectedStudent.progress}%</span>
                       </div>
                     </div>
-
                     <div className="info-group">
                       <h3>Lesson Schedule</h3>
-                      <div className="info-item">
-                        <span className="info-label">Last Lesson:</span>
-                        <span className="info-value">{selectedStudent.lastLesson || 'N/A'}</span>
-                      </div>
-                      <div className="info-item">
-                        <span className="info-label">Next Lesson:</span>
-                        <span className="info-value">{selectedStudent.nextLesson || 'N/A'}</span>
-                      </div>
+                      <div className="info-item"><span className="info-label">Last Lesson:</span><span className="info-value">{selectedStudent.lastLesson || 'N/A'}</span></div>
+                      <div className="info-item"><span className="info-label">Next Lesson:</span><span className="info-value">{selectedStudent.nextLesson || 'N/A'}</span></div>
                     </div>
                   </div>
                 </div>
