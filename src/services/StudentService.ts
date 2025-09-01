@@ -75,21 +75,18 @@ const displayPhone = (p: string) =>
     p.startsWith('00420') ? p.replace(/^00420/, '+420') : p;
 
 export async function updateStudent(
-    id: string,
+    learnerId: string,
     dto: LearnerUpdateDTO,
     token: string
-): Promise<{ firstName: string; lastName: string; email: string; phone: string }> {
-    const res = await apiFetch<LearnerResponseDTO>(`/api/learners/${id}`, {
+): Promise<Student> {
+    return apiFetch<Student>(`/api/learners/${learnerId}`, {
         method: 'PUT',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
         body: JSON.stringify(dto),
     });
-    return {
-        firstName: res.firstName,
-        lastName: res.lastName,
-        email: res.email,
-        phone: displayPhone(res.phoneNumber),
-    };
 }
 
 export async function fetchUsersByRoles(

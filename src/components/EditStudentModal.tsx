@@ -94,7 +94,7 @@ const EditStudentModal: React.FC<EditStudentModalProps> = ({ isOpen, onClose, st
             const res = await updateStudent(student.id, dto, token);
             onSaved({
                 id: student.id,
-                name: `${res.firstName} ${res.lastName}`.trim(),
+                name: res.name,
                 email: res.email,
                 phone: res.phone,
             });

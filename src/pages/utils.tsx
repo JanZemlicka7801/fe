@@ -23,6 +23,13 @@ export type Student = {
     status: 'active' | 'inactive' | 'completed';
 };
 
+export type LearnerUpdateDTO = {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+};
+
 export type StudentPayload = {
     id: string;
     firstName: string;
@@ -49,13 +56,6 @@ export type LearnerUserCreateResponseDTO = {
     role: 'LEARNER';
     createdAt: string;
     tempPassword: string;
-};
-
-export type LearnerUpdateDTO = {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
 };
 
 export type LearnerResponseDTO = {

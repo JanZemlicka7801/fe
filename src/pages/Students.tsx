@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   fetchStudents,
@@ -11,6 +11,12 @@ import AddStudentModal from '../components/AddStudentModal';
 import ConfirmModal from '../components/ConfirmModal';
 import EditStudentModal from '../components/EditStudentModal';
 import {Student, StudentCreateDTO} from "./utils";
+
+const toTime = (s?: string | null) => {
+  if (!s) return Number.POSITIVE_INFINITY;
+  const t = Date.parse(s);
+  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+};
 
 const Students: React.FC = () => {
   const auth = useAuth() as any;
@@ -68,6 +74,16 @@ const Students: React.FC = () => {
     }
     fetchUsersByRoles(token).then(setUsers).catch(console.error);
   }, [token]);
+
+  const visibleStudents = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const filtered = students.filter((s) => {
+      const matchesName = (s?.name || '').toLowerCase().includes(q);
+      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+      return matchesName && matchesStatus;
+    });
+    return filtered.slice().sort((a, b) => toTime(a.nextLesson) - toTime(b.nextLesson));
+  }, [students, searchTerm, statusFilter]);
 
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
@@ -152,7 +168,7 @@ const Students: React.FC = () => {
           <div className="search-box">
             <input
                 type="text"
-                placeholder="Search students..."
+                placeholder="Search by name…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -160,10 +176,14 @@ const Students: React.FC = () => {
 
           <div className="filter-box">
             <label>Status:</label>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
+            <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+            >
               <option value="all">All</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+              <option value="completed">Completed</option>
             </select>
           </div>
 
@@ -192,14 +212,19 @@ const Students: React.FC = () => {
           <table className="students-table">
             <thead>
             <tr>
-              <th>Name</th><th>Email</th><th>Phone</th><th>Progress</th>
-              <th>Status</th><th>Last Lesson</th><th>Next Lesson</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Progress</th>
+              <th>Status</th>
+              <th>Last Lesson</th>
+              <th>Next Lesson</th>
               {canManage && <th>Actions</th>}
             </tr>
             </thead>
             <tbody>
-            {filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => (
+            {visibleStudents.length > 0 ? (
+                visibleStudents.map((student) => (
                     <tr key={student.id}>
                       <td onClick={() => handleStudentClick(student)}>{student.name}</td>
                       <td onClick={() => handleStudentClick(student)}>{student.email}</td>
@@ -219,19 +244,28 @@ const Students: React.FC = () => {
                       <td onClick={() => handleStudentClick(student)}>{student.nextLesson || 'N/A'}</td>
                       {canManage && (
                           <td>
-                            <button className="btn-secondary" onClick={() => openEdit(student)} style={{ marginRight: 8 }}>
+                            <button
+                                className="btn-secondary"
+                                onClick={(e) => { e.stopPropagation(); openEdit(student); }}
+                            >
                               Edit
                             </button>
-                            <button className="btn-danger" onClick={() => handleDeleteClick(student)}>
-                              Delete
-                            </button>
+                            {isAdmin && (
+                                <button
+                                    className="btn-danger"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteClick(student); }}
+                                    style={{ marginLeft: 8 }}
+                                >
+                                  Delete
+                                </button>
+                            )}
                           </td>
                       )}
                     </tr>
                 ))
             ) : (
                 <tr>
-                  <td colSpan={canManage ? 8 : 7} style={{ textAlign: 'center' }}>
+                  <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center' }}>
                     No students found.
                   </td>
                 </tr>
