@@ -90,7 +90,8 @@ const Students: React.FC = () => {
     if (!token || !studentToDelete) return;
     try {
       await deleteStudent(studentToDelete.id, token);
-      setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
+      setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
+      if (selectedStudent?.id === studentToDelete.id) setSelectedStudent(null);
     } catch (error: any) {
       alert(`Error deleting student: ${error.message}`);
     } finally {
