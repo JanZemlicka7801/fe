@@ -1,50 +1,5 @@
 import {apiFetch, HttpError} from './api';
-
-export type StudentCreateDTO = {
-    email: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-};
-
-export type Student = {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    progress: number;
-    lastLesson: string | null;
-    nextLesson: string | null;
-    status: 'active' | 'inactive' | 'completed';
-};
-
-type StudentPayload = {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string | null;
-    phoneNumber: string | null;
-    lessons: number;
-    pastClassesCount: number;
-    previousClass: string | null;
-    nextClass: string | null;
-    validated: boolean;                 // <- must be present
-};
-
-type LearnerUserCreateResponseDTO = {
-    learnerId: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    lessonsRemaining: number;
-    userId: string;
-    username: string;
-    validated: boolean;
-    role: 'LEARNER';
-    createdAt: string;
-    tempPassword: string;
-};
+import {Student, StudentPayload, StudentCreateDTO, LearnerUserCreateResponseDTO, LearnerUpdateDTO, LearnerResponseDTO} from "../pages/utils";
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : null);
 
@@ -115,6 +70,27 @@ export type AppUser = {
     role: 'LEARNER' | 'INSTRUCTOR' | 'ADMIN';
     createdAt: string;
 };
+
+const displayPhone = (p: string) =>
+    p.startsWith('00420') ? p.replace(/^00420/, '+420') : p;
+
+export async function updateStudent(
+    id: string,
+    dto: LearnerUpdateDTO,
+    token: string
+): Promise<{ firstName: string; lastName: string; email: string; phone: string }> {
+    const res = await apiFetch<LearnerResponseDTO>(`/api/learners/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(dto),
+    });
+    return {
+        firstName: res.firstName,
+        lastName: res.lastName,
+        email: res.email,
+        phone: displayPhone(res.phoneNumber),
+    };
+}
 
 export async function fetchUsersByRoles(
     token: string,

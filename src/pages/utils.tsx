@@ -12,6 +12,61 @@ export const slotTimes = [
     '4:00 PM'
 ];
 
+export type Student = {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    progress: number;
+    lastLesson: string | null;
+    nextLesson: string | null;
+    status: 'active' | 'inactive' | 'completed';
+};
+
+export type StudentPayload = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    phoneNumber: string | null;
+    lessons: number;
+    pastClassesCount: number;
+    previousClass: string | null;
+    nextClass: string | null;
+    validated: boolean;
+};
+
+export type LearnerUserCreateResponseDTO = {
+    learnerId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    lessonsRemaining: number;
+    userId: string;
+    username: string;
+    validated: boolean;
+    role: 'LEARNER';
+    createdAt: string;
+    tempPassword: string;
+};
+
+export type LearnerUpdateDTO = {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+};
+
+export type LearnerResponseDTO = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    lessons: number;
+};
+
 /**
  * Calculates the Monday of the week for a given date.
  * @param date The date to start from.
