@@ -5,7 +5,7 @@ import {
   addStudent,
   deleteStudent,
   fetchUsersByRoles,
-  type Student,            // ← use the service’s Student type
+  type Student,
   type StudentCreateDTO,
   type AppUser,
 } from '../services/StudentService';
@@ -38,7 +38,7 @@ const Students: React.FC = () => {
       setError(null);
       try {
         const data = await fetchStudents(token);
-        if (!cancelled) setStudents(data);  // ← do not recompute status here
+        if (!cancelled) setStudents(data);
       } catch (err: any) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -64,7 +64,6 @@ const Students: React.FC = () => {
     setAddStudentError(null);
     try {
       const added = await addStudent(studentData, token);
-      // Keep status from API; if not provided, derive from validated.
       const status: Student['status'] =
           added.status ?? (added as any).validated ? 'active' : 'inactive';
       setStudents((prev) => [...prev, { ...added, status }]);
@@ -110,7 +109,6 @@ const Students: React.FC = () => {
 
   return (
       <div className="page-container">
-        <h1 className="page-title">Students</h1>
 
         {isAdmin ? (
             <div className="role-indicator admin"><span>Administrator View - Full Management Access</span></div>
