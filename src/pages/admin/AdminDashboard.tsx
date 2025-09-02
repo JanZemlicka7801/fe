@@ -58,10 +58,9 @@ const AdminDashboard: React.FC = () => {
           <div className="admin-actions">
             <h3>Quick Actions</h3>
             <div className="action-buttons">
-              <button className="btn-primary">Manage Users</button>
+              <button className="btn-primary">Manage Students</button>
               <button className="btn-primary">View Reports</button>
               <button className="btn-primary">System Settings</button>
-              <button className="btn-primary">View Logs</button>
             </div>
           </div>
         </div>

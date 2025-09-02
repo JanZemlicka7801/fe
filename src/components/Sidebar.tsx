@@ -15,7 +15,7 @@ const Sidebar: React.FC = () => {
     return (
         <div className="sidebar">
             <div className="sidebar-header">
-                <h3>AutoSchool</h3>
+                <h3>AutoAba</h3>
             </div>
             <div className="sidebar-menu">
                 {isAuthenticated && (
