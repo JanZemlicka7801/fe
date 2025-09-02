@@ -23,7 +23,7 @@ const ENV: Record<string, string> =
 const DEFAULT_INSTRUCTOR_ID =
     ENV.VITE_DEFAULT_INSTRUCTOR_ID ||
     (window.__ENV__ && window.__ENV__.VITE_DEFAULT_INSTRUCTOR_ID) ||
-    '11111111-1111-1111-1111-111111111111'; // set a real UUID
+    '11111111-1111-1111-1111-111111111111';
 
 type ApiBooked = {
     id: string;
@@ -54,7 +54,12 @@ type BookingsGrid = Record<number, Record<string, (Booking | null)[]>>;
 const Schedule: React.FC = () => {
     const auth = useAuth() as any;
     const { user, token } = auth;
-    const weeks = useMemo(() => generateWeeks(), []);
+    const roleRaw = String(user?.role ?? '');
+    const isStudentView = /^(student|learner)$/i.test(roleRaw);
+    const allWeeks = useMemo(() => generateWeeks(), []);
+    const role = user?.role ?? '';
+    const isStudent = role === 'STUDENT';
+    const weeks = useMemo(() => (isStudentView ? allWeeks.slice(0, 2) : allWeeks), [allWeeks, isStudentView]);
     const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
     const [bookings, setBookings] = useState<BookingsGrid>({});
     const buildEmptyGrid = (): BookingsGrid => {
@@ -68,6 +73,10 @@ const Schedule: React.FC = () => {
         });
         return grid;
     };
+
+    useEffect(() => {
+        setCurrentWeekIndex(i => Math.min(i, weeks.length - 1));
+    }, [weeks.length]);
 
     useEffect(() => {
         if (!token) return;
@@ -121,7 +130,7 @@ const Schedule: React.FC = () => {
 
         const isAdmin = user.role === 'ADMIN';
         const isInstructor = user.role === 'INSTRUCTOR';
-        const isStudent = user.role === 'LEARNER';
+        const isStudent = /^(student|learner)$/i.test(String(user.role ?? ''));
         const current = bookings[currentWeekIndex]?.[dayStr]?.[slotIndex] ?? null;
 
         if (current) {
