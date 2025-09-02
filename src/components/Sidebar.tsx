@@ -21,19 +21,19 @@ const Sidebar: React.FC = () => {
                 {isAuthenticated && (
                     <>
                         <Link to="/" className={`sidebar-item ${location.pathname === '/' ? 'active' : ''}`}>
-                            <span>Schedule</span>
+                            <span>Přehled</span>
                         </Link>
 
                         {!isAdmin && (
                             <>
                                 <Link to="/students" className={`sidebar-item ${location.pathname === '/students' ? 'active' : ''}`}>
-                                    <span>Students</span>
+                                    <span>Studenti</span>
                                 </Link>
                                 <Link to="/profile" className={`sidebar-item ${location.pathname === '/profile' ? 'active' : ''}`}>
-                                    <span>Profile</span>
+                                    <span>Profil</span>
                                 </Link>
                                 <Link to="/settings" className={`sidebar-item ${location.pathname === '/settings' ? 'active' : ''}`}>
-                                    <span>Settings</span>
+                                    <span>Nastavení</span>
                                 </Link>
                             </>
                         )}
@@ -41,16 +41,16 @@ const Sidebar: React.FC = () => {
                         {isAdmin && (
                             <>
                                 <Link to="/admin" className={`sidebar-item ${location.pathname === '/admin' ? 'active' : ''}`}>
-                                    <span>Admin Dashboard</span>
+                                    <span>Adminova nástěnka</span>
                                 </Link>
                                 <Link to="/students" className={`sidebar-item ${location.pathname === '/students' ? 'active' : ''}`}>
-                                    <span>Students</span>
+                                    <span>Studenti</span>
                                 </Link>
                                 <Link to="/profile" className={`sidebar-item ${location.pathname === '/profile' ? 'active' : ''}`}>
-                                    <span>Profile</span>
+                                    <span>Profil</span>
                                 </Link>
                                 <Link to="/settings" className={`sidebar-item ${location.pathname === '/settings' ? 'active' : ''}`}>
-                                    <span>Settings</span>
+                                    <span>Nastavení</span>
                                 </Link>
                             </>
                         )}
@@ -60,19 +60,19 @@ const Sidebar: React.FC = () => {
                 {!isAuthenticated ? (
                     <>
                         <Link to="/login" className="sidebar-item">
-                            <span>Login</span>
+                            <span>Přihlásit se</span>
                         </Link>
                         <Link to="/register" className="sidebar-item">
-                            <span>Register</span>
+                            <span>Registrovat</span>
                         </Link>
                     </>
                 ) : (
                     <>
                         <div className={`sidebar-role-indicator ${isAdmin ? 'admin' : 'user'}`}>
-                            <span>Role: {isAdmin ? 'Administrator' : 'User'}</span>
+                            <span>Role: {isAdmin ? 'Administrátor' : 'Uživatel'}</span>
                         </div>
                         <button onClick={handleLogout} className="sidebar-item logout-button">
-                            <span>Logout</span>
+                            <span>Odhlásit se</span>
                         </button>
                     </>
                 )}

@@ -2,80 +2,69 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Booking } from './utils';
 
-interface SlotProps {
+type Props = {
     time: string;
     slotBooking: Booking | null;
     isBreak: boolean;
     onClick: () => void;
-}
+};
 
-const Slot: React.FC<SlotProps> = ({ time, slotBooking, isBreak, onClick }) => {
+const Slot: React.FC<Props> = ({ time, slotBooking, isBreak, onClick }) => {
     const { user } = useAuth();
-    const isBooked = slotBooking !== null;
-    let text = time;
+    const cancelled = Boolean((slotBooking as any)?.cancelled) || (!!slotBooking && !slotBooking.learnerId);
+    const instructorId = (slotBooking as any)?.instructorId as string | undefined;
+    const isBooked = !!slotBooking && !cancelled;
+    const mine = !!slotBooking && slotBooking.learnerId === user?.learner?.id;
+    const isAdmin = user?.role === 'ADMIN';
+    const isInstructor = user?.role === 'INSTRUCTOR';
+    const canCancelVacation =
+        cancelled && (isAdmin || (isInstructor && instructorId === user?.id));
+    const canCancelBooked = isBooked && (isAdmin || mine);
+    const clickable = !isBreak && (canCancelVacation || canCancelBooked || !isBooked && !cancelled);
+
+    let label = time;
     let style: React.CSSProperties = {
         border: 'none',
-        borderRadius: '0.25rem',
-        padding: '1rem',
-        fontWeight: 500,
-        transition: 'all 0.2s ease',
+        borderRadius: '0.5rem',
+        padding: '0.9rem',
+        fontWeight: 600,
         textAlign: 'center',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.5rem',
         width: '100%',
+        transition: 'transform .1s ease',
     };
 
     if (isBreak) {
-        style = {
-            ...style,
-            backgroundColor: '#e9ecef',
-            color: '#6c757d',
-            cursor: 'default',
-        };
+        label = 'Break';
+        style = { ...style, backgroundColor: '#e9ecef', color: '#6c757d', cursor: 'default' };
+    } else if (cancelled) {
+        label = 'Canceled';
+        style = { ...style, backgroundColor: '#adb5bd', color: '#212529', cursor: clickable ? 'pointer' : 'not-allowed' };
     } else if (isBooked) {
-        if (user?.role === 'ADMIN') {
-            text = `${slotBooking.learnerFirstName} ${slotBooking.learnerLastName}`;
-            style = {
-                ...style,
-                backgroundColor: '#e63946',
-                color: '#ffffff',
-                cursor: 'pointer',
-            };
+        if (isAdmin) {
+            const full = `${slotBooking!.learnerFirstName ?? ''} ${slotBooking!.learnerLastName ?? ''}`.trim();
+            label = full || 'Booked';
+            style = { ...style, backgroundColor: '#e63946', color: '#fff', cursor: 'pointer' };
+        } else if (mine) {
+            label = 'Booked (Instructor)';
+            style = { ...style, backgroundColor: '#4361ee', color: '#fff', cursor: 'pointer' };
         } else {
-            text = 'Booked';
-            style = {
-                ...style,
-                backgroundColor: '#e63946',
-                color: '#ffffff',
-                cursor: 'not-allowed',
-            };
-            if (slotBooking.learnerId === user?.learner?.id) {
-                style = {
-                    ...style,
-                    backgroundColor: '#4361ee',
-                    color: '#ffffff',
-                    cursor: 'pointer', // Allow learners to view/cancel their own
-                };
-            }
+            label = 'Booked';
+            style = { ...style, backgroundColor: '#e63946', color: '#fff', cursor: 'not-allowed' };
         }
     } else {
-        style = {
-            ...style,
-            backgroundColor: '#4895ef',
-            color: '#ffffff',
-            cursor: 'pointer',
-        };
+        label = time;
+        style = { ...style, backgroundColor: '#4895ef', color: '#fff', cursor: 'pointer' };
     }
 
     return (
         <button
             style={style}
-            onClick={isBreak || (isBooked && user?.role !== 'ADMIN' && slotBooking.learnerId !== user?.learner?.id) ? undefined : onClick}
-            disabled={isBreak || (isBooked && user?.role !== 'ADMIN' && slotBooking.learnerId !== user?.learner?.id)}
+            onClick={clickable ? onClick : undefined}
+            disabled={!clickable}
+            aria-label={label}
+            title={label}
         >
-            {text}
+            {label}
         </button>
     );
 };

@@ -9,7 +9,6 @@ function readEnv(): AnyEnv {
 
 const ENV = readEnv();
 
-// Default to backend root. Paths will include /api.
 const API_BASE =
     (ENV.VITE_BACKEND_ROOT as string) ||
     (ENV.REACT_APP_BACKEND_ROOT as string) ||
@@ -17,19 +16,22 @@ const API_BASE =
 
 export class HttpError extends Error { constructor(public status:number, message:string){super(message);} }
 
-export async function apiFetch<T>(url:string, opts: RequestInit = {}): Promise<T> {
-    const r = await fetch(url, opts);
-    if (!r.ok) {
-        let msg = 'Something went wrong.';
-        try {
-            const body = await r.json();
-            msg = body?.message || msg;
-        } catch { /* ignore */ }
-        if (r.status === 405) msg = 'Request not allowed.';
-        if (r.status === 404) msg = 'Resource not found.';
-        if (r.status === 401) msg = 'Please sign in.';
-        if (r.status === 403) msg = 'You don’t have permission.';
-        throw new HttpError(r.status, msg);
-    }
-    return r.status === 204 ? (undefined as T) : r.json();
+export async function apiFetch<T = any>(
+    url: string,
+    opts: RequestInit & { token?: string } = {}
+): Promise<T> {
+    const { token, headers, ...rest } = opts;
+    const res = await fetch(url, {
+        ...rest,
+        headers: {
+            'Content-Type': 'application/json',
+            ...(headers || {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+    });
+    if (!res.ok) throw new Error(`${url} ${res.status}`);
+
+    const text = await res.text();
+    return (text ? JSON.parse(text) : (undefined as any)) as T;
 }

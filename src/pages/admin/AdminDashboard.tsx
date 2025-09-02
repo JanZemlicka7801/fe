@@ -25,11 +25,11 @@ const AdminDashboard: React.FC = () => {
 
         <div className="admin-dashboard">
           <div className="admin-welcome">
-            <h2>Welcome, {name}!</h2>
-            <p>This is the admin dashboard where you can manage the driving school system.</p>
+            <h2>Vítejte, {name}!</h2>
+            <p>Toto je adminova nástěnka, kde je možné pracovat s celkovým systémem.</p>
             {stats && (
                 <p className="text-muted">
-                  Week {stats.weekStart} to {stats.weekEnd}
+                  Aktuální týden od {stats.weekStart} do {stats.weekEnd}
                 </p>
             )}
             {error && <p className="error-text">{error}</p>}
@@ -37,30 +37,30 @@ const AdminDashboard: React.FC = () => {
 
           <div className="admin-stats">
             <div className="stats-card">
-              <h3>Students</h3>
+              <h3>Studenti</h3>
               <div className="stats-number">{stats?.students ?? '—'}</div>
-              <p>Total registered students</p>
+              <p>Celkový počet uživatelů</p>
             </div>
 
             <div className="stats-card">
-              <h3>Instructors</h3>
+              <h3>Instrutoři</h3>
               <div className="stats-number">{stats?.instructors ?? '—'}</div>
-              <p>Active driving instructors</p>
+              <p>Celkový počet instruktorů</p>
             </div>
 
             <div className="stats-card">
-              <h3>Classes</h3>
+              <h3>Lekce</h3>
               <div className="stats-number">{stats?.classesThisWeek ?? '—'}</div>
-              <p>Scheduled this week</p>
+              <p>Naplánováno na tento týden</p>
             </div>
           </div>
 
           <div className="admin-actions">
-            <h3>Quick Actions</h3>
+            <h3>Rychlé pokyny</h3>
             <div className="action-buttons">
-              <button className="btn-primary">Manage Students</button>
-              <button className="btn-primary">View Reports</button>
-              <button className="btn-primary">System Settings</button>
+              <button className="btn-primary">Úprava studentů</button>
+              <button className="btn-primary">Stažení reportů</button>
+              <button className="btn-primary">Nastavení systému</button>
             </div>
           </div>
         </div>
