@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchAdminStats, type AdminStats } from '../../services/adminService';
+import {Link} from "react-router-dom";
 
 const AdminDashboard: React.FC = () => {
   const { user, token } = useAuth() as any;
@@ -58,7 +59,9 @@ const AdminDashboard: React.FC = () => {
           <div className="admin-actions">
             <h3>Rychlé pokyny</h3>
             <div className="action-buttons">
-              <button className="btn-primary">Úprava studentů</button>
+              <Link to="/students">
+                <button className="btn-primary">Úprava studentů</button>
+              </Link>
               <button className="btn-primary">Stažení reportů</button>
               <button className="btn-primary">Nastavení systému</button>
             </div>

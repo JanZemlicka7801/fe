@@ -7,6 +7,8 @@ export type BookedClass = {
     instructorId: string;
     learnerId: string | null;
     cancelled: boolean;
+    learnerFirstName?: string | null;
+    learnerLastName?: string | null;
 };
 
 export async function fetchAllBookedClasses(token: string, fromISO: string, toISO: string) {

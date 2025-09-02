@@ -41,10 +41,10 @@ const toUIBooking = (api: ApiBooked): Booking => {
         teacher: '',
         car: '',
         learnerId: api.learnerId ?? '',
-        learnerFirstName: '',
-        learnerLastName: '',
+        learnerFirstName: (api as any).learnerFirstName ?? '',
+        learnerLastName: (api as any).learnerLastName ?? '',
     };
-    (base as any).cancelled = !!api.cancelled;
+    (base as any).cancelled = !!(api as any).cancelled;
     (base as any).instructorId = api.instructorId;
     return base;
 };
