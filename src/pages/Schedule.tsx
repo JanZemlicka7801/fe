@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Booking, slotTimes, generateWeeks } from './utils';
 import { fetchAllBookedClasses, bookClass, cancelClass } from '../services/bookingService';
 
+declare global { interface Window { __ENV__?: Record<string, string>; } }
+
 const parseSlotTime = (slot: string) => {
     const [timePart, ampm] = slot.split(' ');
     let [hour, minute] = timePart.split(':').map(Number);
@@ -16,6 +18,12 @@ const toLocalDateTimeString = (d: Date) =>
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
 
 const SLOT_MINUTES = 45;
+const ENV: Record<string, string> =
+    ((typeof import.meta !== 'undefined' && (import.meta as any).env) || {}) as any;
+const DEFAULT_INSTRUCTOR_ID =
+    ENV.VITE_DEFAULT_INSTRUCTOR_ID ||
+    (window.__ENV__ && window.__ENV__.VITE_DEFAULT_INSTRUCTOR_ID) ||
+    '11111111-1111-1111-1111-111111111111'; // set a real UUID
 
 type ApiBooked = {
     id: string;
@@ -113,17 +121,18 @@ const Schedule: React.FC = () => {
 
         const isAdmin = user.role === 'ADMIN';
         const isInstructor = user.role === 'INSTRUCTOR';
+        const isStudent = user.role === 'LEARNER';
         const current = bookings[currentWeekIndex]?.[dayStr]?.[slotIndex] ?? null;
 
         if (current) {
             const isVacation = Boolean((current as any)?.cancelled);
             const madeByThisInstructor = (current as any)?.instructorId === user.id;
-            const mine = current.learnerId && user.learner?.id && current.learnerId === user.learner.id;
+            const mine = !!current && (current.learnerId === user?.id || current.learnerId === user?.learner?.id);
 
             const canCancel =
                 isAdmin ||
                 (isVacation && isInstructor && madeByThisInstructor) ||
-                (!isVacation && !!mine);
+                (!isVacation && mine);
 
             if (!canCancel) return;
 
@@ -146,33 +155,33 @@ const Schedule: React.FC = () => {
         const { hour, minute } = parseSlotTime(slotTimes[slotIndex]);
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute, 0);
         const end = new Date(start.getTime() + SLOT_MINUTES * 60 * 1000);
-        const instructorId: string = String(user.id);
+        const existingDay = bookings[currentWeekIndex]?.[dayStr] ?? [];
+        const inferred = (existingDay.find(b => !!b) as any)?.instructorId;
+        const instructorId = String(isInstructor ? user.id : inferred || DEFAULT_INSTRUCTOR_ID);
 
         try {
-            let apiBooked: ApiBooked;
-
-            if (user.learner?.id) {
-                // student booking
-                apiBooked = (await bookClass(
-                    token,
-                    instructorId,
-                    toLocalDateTimeString(start),
-                    toLocalDateTimeString(end)
-                )) as ApiBooked;
-            } else if (isAdmin || isInstructor) {
-                apiBooked = (await bookClass(
+            let apiBooked;
+            if (isAdmin || isInstructor) {
+                apiBooked = await bookClass(
                     token,
                     instructorId,
                     toLocalDateTimeString(start),
                     toLocalDateTimeString(end),
                     { vacation: true }
-                )) as ApiBooked;
+                );
+            } else if (isStudent) {
+                apiBooked = await bookClass(
+                    token,
+                    instructorId,
+                    toLocalDateTimeString(start),
+                    toLocalDateTimeString(end)
+                );
             } else {
-                console.error('User has no learner profile and is not admin/instructor.');
+                console.error('Unknown role');
                 return;
             }
 
-            const booked = toUIBooking(apiBooked);
+            const booked = toUIBooking(apiBooked as any);
 
             setBookings((prev) => {
                 const copy = { ...prev };

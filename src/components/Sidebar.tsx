@@ -26,9 +26,6 @@ const Sidebar: React.FC = () => {
 
                         {!isAdmin && (
                             <>
-                                <Link to="/students" className={`sidebar-item ${location.pathname === '/students' ? 'active' : ''}`}>
-                                    <span>Studenti</span>
-                                </Link>
                                 <Link to="/profile" className={`sidebar-item ${location.pathname === '/profile' ? 'active' : ''}`}>
                                     <span>Profil</span>
                                 </Link>
