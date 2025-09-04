@@ -3,6 +3,7 @@ import Day from './Day';
 import { useAuth } from '../contexts/AuthContext';
 import { Booking, slotTimes, generateWeeks } from './utils';
 import { fetchAllBookedClasses, bookClass, cancelClass } from '../services/bookingService';
+import { HttpError } from '../services/api';
 
 declare global { interface Window { __ENV__?: Record<string, string>; } }
 
@@ -24,6 +25,28 @@ const DEFAULT_INSTRUCTOR_ID =
     ENV.VITE_DEFAULT_INSTRUCTOR_ID ||
     (window.__ENV__ && window.__ENV__.VITE_DEFAULT_INSTRUCTOR_ID) ||
     '11111111-1111-1111-1111-111111111111';
+
+function Banner({
+                    text,
+                    kind = 'info',
+                    onClose,
+                }: {
+    text: string;
+    kind?: 'info' | 'warning' | 'error';
+    onClose?: () => void;
+}) {
+    if (!text) return null;
+    const cls =
+        kind === 'warning' ? 'banner warning' : kind === 'error' ? 'banner error' : 'banner info';
+    return (
+        <div className={cls} role="status" aria-live="polite">
+            <span>{text}</span>
+            <button aria-label="Close notification" onClick={onClose}>
+                ×
+            </button>
+        </div>
+    );
+}
 
 type ApiBooked = {
     id: string;
@@ -54,14 +77,18 @@ type BookingsGrid = Record<number, Record<string, (Booking | null)[]>>;
 const Schedule: React.FC = () => {
     const auth = useAuth() as any;
     const { user, token } = auth;
+
     const roleRaw = String(user?.role ?? '');
     const isStudentView = /^(student|learner)$/i.test(roleRaw);
+
     const allWeeks = useMemo(() => generateWeeks(), []);
-    const role = user?.role ?? '';
-    const isStudent = role === 'STUDENT';
     const weeks = useMemo(() => (isStudentView ? allWeeks.slice(0, 2) : allWeeks), [allWeeks, isStudentView]);
     const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
     const [bookings, setBookings] = useState<BookingsGrid>({});
+
+    const [notice, setNotice] = useState<string | null>(null);
+    const [noticeKind, setNoticeKind] = useState<'info' | 'warning' | 'error'>('info');
+
     const buildEmptyGrid = (): BookingsGrid => {
         const grid: BookingsGrid = {};
         weeks.forEach((week: Date[], wIdx: number) => {
@@ -75,7 +102,7 @@ const Schedule: React.FC = () => {
     };
 
     useEffect(() => {
-        setCurrentWeekIndex(i => Math.min(i, weeks.length - 1));
+        setCurrentWeekIndex((i) => Math.min(i, weeks.length - 1));
     }, [weeks.length]);
 
     useEffect(() => {
@@ -121,16 +148,29 @@ const Schedule: React.FC = () => {
                 setBookings(filled);
             } catch (e) {
                 console.error('Failed to load booked classes:', e);
+                setNoticeKind('error');
+                setNotice('Failed to load schedule.');
             }
         })();
     }, [token, weeks]);
 
+    useEffect(() => {
+        if (!notice) return;
+        const t = setTimeout(() => setNotice(null), 6000);
+        return () => clearTimeout(t);
+    }, [notice]);
+
     const handleSlotToggle = async (dayStr: string, slotIndex: number) => {
-        if (!token || !user) return;
+        if (!token || !user) {
+            setNoticeKind('error');
+            setNotice('You must be signed in to book.');
+            return;
+        }
 
         const isAdmin = user.role === 'ADMIN';
         const isInstructor = user.role === 'INSTRUCTOR';
         const isStudent = /^(student|learner)$/i.test(String(user.role ?? ''));
+
         const current = bookings[currentWeekIndex]?.[dayStr]?.[slotIndex] ?? null;
 
         if (current) {
@@ -143,7 +183,11 @@ const Schedule: React.FC = () => {
                 (isVacation && isInstructor && madeByThisInstructor) ||
                 (!isVacation && mine);
 
-            if (!canCancel) return;
+            if (!canCancel) {
+                setNoticeKind('warning');
+                setNotice('You cannot cancel this class.');
+                return;
+            }
 
             try {
                 await cancelClass(token, current.id);
@@ -154,8 +198,12 @@ const Schedule: React.FC = () => {
                     copy[currentWeekIndex] = { ...copy[currentWeekIndex], [dayStr]: arr };
                     return copy;
                 });
-            } catch (e) {
+                setNoticeKind('info');
+                setNotice('Class canceled.');
+            } catch (e: any) {
                 console.error('Cancel failed:', e);
+                setNoticeKind('error');
+                setNotice(e?.message ? String(e.message) : 'Cancel failed.');
             }
             return;
         }
@@ -165,7 +213,7 @@ const Schedule: React.FC = () => {
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute, 0);
         const end = new Date(start.getTime() + SLOT_MINUTES * 60 * 1000);
         const existingDay = bookings[currentWeekIndex]?.[dayStr] ?? [];
-        const inferred = (existingDay.find(b => !!b) as any)?.instructorId;
+        const inferred = (existingDay.find((b) => !!b) as any)?.instructorId;
         const instructorId = String(isInstructor ? user.id : inferred || DEFAULT_INSTRUCTOR_ID);
 
         try {
@@ -186,7 +234,8 @@ const Schedule: React.FC = () => {
                     toLocalDateTimeString(end)
                 );
             } else {
-                console.error('Unknown role');
+                setNoticeKind('error');
+                setNotice('Unknown role.');
                 return;
             }
 
@@ -199,13 +248,25 @@ const Schedule: React.FC = () => {
                 copy[currentWeekIndex] = { ...copy[currentWeekIndex], [dayStr]: arr };
                 return copy;
             });
-        } catch (e) {
+
+            setNoticeKind('info');
+            setNotice('Class booked.');
+        } catch (e: any) {
+            if (e instanceof HttpError && e.status === 409) {
+                setNoticeKind('warning');
+                setNotice(e.message);
+                return;
+            }
             console.error('Booking failed:', e);
+            setNoticeKind('error');
+            setNotice(e?.message ? String(e.message) : 'Booking failed.');
         }
     };
 
     return (
         <div>
+            <Banner text={notice ?? ''} kind={noticeKind} onClose={() => setNotice(null)} />
+
             <div className="week-navigation mb-3 d-flex align-items-center gap-2">
                 <button
                     className="btn btn-outline-secondary"
