@@ -7,6 +7,8 @@ export type BookedClass = {
     instructorId: string;
     learnerId: string | null;
     cancelled: boolean;
+    note?: string;
+    type: 'Získání nového ŘP' | 'Kondiční jízdy' | 'Jiné';
     learnerFirstName?: string | null;
     learnerLastName?: string | null;
 };

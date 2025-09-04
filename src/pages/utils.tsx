@@ -1,15 +1,15 @@
 export const slotTimes = [
-    '8:00 AM',
     '9:00 AM',
-    '10:00 AM',
-    '10:15 AM',
-    '11:15 AM',
+    '9:45 AM',
+    '10:30 AM',
+    '10:45 AM',
+    '11:30 AM',
     '12:15 PM',
-    '12:45 PM',
     '1:45 PM',
-    '2:45 PM',
-    '3:00 PM',
-    '4:00 PM'
+    '2:30 PM',
+    '3:15 PM',
+    '3:30 PM',
+    '4:15 PM'
 ];
 
 export type Student = {
@@ -58,6 +58,21 @@ export type LearnerUserCreateResponseDTO = {
     tempPassword: string;
 };
 
+export type ClassDTO = {
+    id: string;
+    learnerId: string;
+    instructorId: string;
+    startsAt: string;
+    endsAt: string;
+    note?: string;
+    type?: string;
+};
+
+export type LessonsResponse = {
+    total: number;
+    classes: ClassDTO[]
+};
+
 export type LearnerResponseDTO = {
     id: string;
     firstName: string;
@@ -77,6 +92,13 @@ export const getMonday = (date: Date): Date => {
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setDate(diff));
+};
+
+export const fmt = (iso?: string) => {
+    if (!iso) return 'N/A';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return 'N/A';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 };
 
 /**

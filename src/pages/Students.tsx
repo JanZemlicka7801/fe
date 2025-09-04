@@ -10,7 +10,7 @@ import {
 import AddStudentModal from '../components/AddStudentModal';
 import ConfirmModal from '../components/ConfirmModal';
 import EditStudentModal from '../components/EditStudentModal';
-import {Student, StudentCreateDTO} from "./utils";
+import {fmt, LessonsResponse, Student, StudentCreateDTO} from "./utils";
 
 const toTime = (s?: string | null) => {
   if (!s) return Number.POSITIVE_INFINITY;
@@ -31,15 +31,14 @@ const Students: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Student['status']>('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addStudentError, setAddStudentError] = useState<string | null>(null);
-
+  const [lessons, setLessons] = useState<LessonsResponse | null>(null);
+  const [lessonsLoading, setLessonsLoading] = useState(false);
+  const [lessonsError, setLessonsError] = useState<string | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-
   const [users, setUsers] = useState<AppUser[]>([]);
-
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
 
@@ -74,6 +73,40 @@ const Students: React.FC = () => {
     }
     fetchUsersByRoles(token).then(setUsers).catch(console.error);
   }, [token]);
+
+  useEffect(() => {
+    if (!selectedStudent || !token) {
+      setLessons(null);
+      setLessonsError(null);
+      setLessonsLoading(false);
+      return;
+    }
+    let aborted = false;
+    setLessonsLoading(true);
+    setLessonsError(null);
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/classes/retrieve/${selectedStudent.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.status === 204) { if (!aborted) setLessons({ total: 0, classes: [] }); return; }
+
+        const text = await res.text();
+        const data: LessonsResponse = text ? JSON.parse(text) : { total: 0, classes: [] };
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        if (!aborted) setLessons(data);
+      } catch (e: any) {
+        if (!aborted) { setLessonsError(e.message || 'Failed to load classes'); setLessons({ total: 0, classes: [] }); }
+      } finally {
+        if (!aborted) setLessonsLoading(false);
+      }
+    })();
+
+    return () => { aborted = true; };
+  }, [selectedStudent, token]);
 
   const visibleStudents = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -278,29 +311,71 @@ const Students: React.FC = () => {
             <div className="student-details-modal">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h2>{selectedStudent.name}</h2>
+                  <h2>
+                    {selectedStudent.name}{' '}
+                    {lessons && (
+                      <span style={{ fontSize: '0.6em', color: '#777' }}>
+                        ({lessons.total}/28 hodin)
+                      </span>
+                    )}
+                  </h2>
                   <button className="btn-close" onClick={closeStudentDetails}>×</button>
                 </div>
+
+
                 <div className="modal-body">
-                  <div className="student-info">
-                    <div className="info-group">
-                      <h3>Contact Information</h3>
-                      <div className="info-item"><span className="info-label">Email:</span><span className="info-value">{selectedStudent.email}</span></div>
-                      <div className="info-item"><span className="info-label">Phone:</span><span className="info-value">{selectedStudent.phone}</span></div>
-                    </div>
-                    <div className="info-group">
-                      <h3>Progress</h3>
-                      <div className="progress-bar-container large">
-                        <div className="progress-bar" style={{ width: `${selectedStudent.progress}%` }} />
-                        <span>{selectedStudent.progress}%</span>
-                      </div>
-                    </div>
-                    <div className="info-group">
-                      <h3>Lesson Schedule</h3>
-                      <div className="info-item"><span className="info-label">Last Lesson:</span><span className="info-value">{selectedStudent.lastLesson || 'N/A'}</span></div>
-                      <div className="info-item"><span className="info-label">Next Lesson:</span><span className="info-value">{selectedStudent.nextLesson || 'N/A'}</span></div>
-                    </div>
-                  </div>
+                  {lessonsLoading && <div>Loading…</div>}
+                  {lessonsError && <div className="error-message">{lessonsError}</div>}
+
+                  {!lessonsLoading && !lessonsError && (
+                      <>
+                        <h3 style={{ marginTop: 0 }}>Budoucí lekce</h3>
+                        <table className="students-table" style={{ marginBottom: 16 }}>
+                          <thead>
+                          <tr><th>Začátek</th><th>Konec</th><th>Typ</th><th>Poznámka</th></tr>
+                          </thead>
+                          <tbody>
+                          {lessons?.classes
+                              ?.filter(c => Date.parse(c.endsAt) >= Date.now())
+                              .sort((a,b)=>Date.parse(a.startsAt)-Date.parse(b.startsAt))
+                              .map(c => (
+                                  <tr key={c.id}>
+                                    <td>{fmt(c.startsAt)}</td>
+                                    <td>{fmt(c.endsAt)}</td>
+                                    <td>{c.type || '—'}</td>
+                                    <td>{c.note || '—'}</td>
+                                  </tr>
+                              ))}
+                          {(!lessons || lessons.classes.filter(c=>Date.parse(c.endsAt) >= Date.now()).length === 0) && (
+                              <tr><td colSpan={4}>Žádné lekce</td></tr>
+                          )}
+                          </tbody>
+                        </table>
+
+                        <h3>Minulé lekce</h3>
+                        <table className="students-table">
+                          <thead>
+                          <tr><th>Začátek</th><th>Konec</th><th>Typ</th><th>Poznámka</th></tr>
+                          </thead>
+                          <tbody>
+                          {lessons?.classes
+                              ?.filter(c => Date.parse(c.endsAt) < Date.now())
+                              .sort((a,b)=>Date.parse(b.startsAt)-Date.parse(a.startsAt))
+                              .map(c => (
+                                  <tr key={c.id}>
+                                    <td>{fmt(c.startsAt)}</td>
+                                    <td>{fmt(c.endsAt)}</td>
+                                    <td>{c.type || '—'}</td>
+                                    <td>{c.note || '—'}</td>
+                                  </tr>
+                              ))}
+                          {(!lessons || lessons.classes.filter(c=>Date.parse(c.endsAt) < Date.now()).length === 0) && (
+                              <tr><td colSpan={4}>Žádné lekce</td></tr>
+                          )}
+                          </tbody>
+                        </table>
+                      </>
+                  )}
                 </div>
               </div>
             </div>

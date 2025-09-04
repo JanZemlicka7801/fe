@@ -72,10 +72,8 @@ function App() {
         <AuthProvider>
             <Router>
                 <Routes>
-                    {/* Public route for authentication */}
                     <Route path="/auth" element={<AuthPage />} />
 
-                    {/* User-accessible routes (available to both USER and ADMIN) */}
                     <Route
                         path="/"
                         element={
