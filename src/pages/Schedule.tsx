@@ -4,16 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { Booking, slotTimes, generateWeeks } from './utils';
 import { fetchAllBookedClasses, bookClass, cancelClass } from '../services/bookingService';
 import { HttpError } from '../services/api';
+import { parseSlotTime } from './Day';
 
 declare global { interface Window { __ENV__?: Record<string, string>; } }
 
-const parseSlotTime = (slot: string) => {
-    const [timePart, ampm] = slot.split(' ');
-    let [hour, minute] = timePart.split(':').map(Number);
-    if (ampm === 'PM' && hour !== 12) hour += 12;
-    if (ampm === 'AM' && hour === 12) hour = 0;
-    return { hour, minute };
-};
 const pad = (n: number) => String(n).padStart(2, '0');
 const toLocalDateTimeString = (d: Date) =>
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
@@ -170,9 +164,9 @@ const Schedule: React.FC = () => {
         const isAdmin = user.role === 'ADMIN';
         const isInstructor = user.role === 'INSTRUCTOR';
         const isStudent = /^(student|learner)$/i.test(String(user.role ?? ''));
-
         const current = bookings[currentWeekIndex]?.[dayStr]?.[slotIndex] ?? null;
 
+        // CANCEL existing booking
         if (current) {
             const isVacation = Boolean((current as any)?.cancelled);
             const madeByThisInstructor = (current as any)?.instructorId === user.id;
@@ -180,13 +174,30 @@ const Schedule: React.FC = () => {
 
             const canCancel =
                 isAdmin ||
-                (isVacation && isInstructor && madeByThisInstructor) ||
+                (isInstructor && (isVacation ? madeByThisInstructor : true)) || // instructors can cancel their own; adjust if needed
                 (!isVacation && mine);
 
             if (!canCancel) {
                 setNoticeKind('warning');
                 setNotice('You cannot cancel this class.');
                 return;
+            }
+
+            // 12h cutoff applies to LEARNERS only
+            if (!isAdmin && !isInstructor && mine) {
+                const startsAtISO = (current as any)?.start || (current as any)?.date;
+                const startsAt = new Date(startsAtISO);
+                const diffMs = startsAt.getTime() - Date.now();
+                if (!(startsAt instanceof Date && !isNaN(startsAt.getTime()))) {
+                    setNoticeKind('error');
+                    setNotice('Cannot determine class start time.');
+                    return;
+                }
+                if (diffMs < 12 * 60 * 60 * 1000) {
+                    setNoticeKind('warning');
+                    setNotice('You cannot cancel less than 12 hours before start.');
+                    return;
+                }
             }
 
             try {
@@ -201,13 +212,18 @@ const Schedule: React.FC = () => {
                 setNoticeKind('info');
                 setNotice('Class canceled.');
             } catch (e: any) {
-                console.error('Cancel failed:', e);
+                if (e instanceof HttpError && e.status === 409) {
+                    setNoticeKind('warning');
+                    setNotice(e.message);
+                    return;
+                }
                 setNoticeKind('error');
                 setNotice(e?.message ? String(e.message) : 'Cancel failed.');
             }
             return;
         }
 
+        // BOOK new slot
         const day = new Date(dayStr);
         const { hour, minute } = parseSlotTime(slotTimes[slotIndex]);
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute, 0);
@@ -220,18 +236,11 @@ const Schedule: React.FC = () => {
             let apiBooked;
             if (isAdmin || isInstructor) {
                 apiBooked = await bookClass(
-                    token,
-                    instructorId,
-                    toLocalDateTimeString(start),
-                    toLocalDateTimeString(end),
-                    { vacation: true }
+                    token, instructorId, toLocalDateTimeString(start), toLocalDateTimeString(end), { vacation: true }
                 );
             } else if (isStudent) {
                 apiBooked = await bookClass(
-                    token,
-                    instructorId,
-                    toLocalDateTimeString(start),
-                    toLocalDateTimeString(end)
+                    token, instructorId, toLocalDateTimeString(start), toLocalDateTimeString(end)
                 );
             } else {
                 setNoticeKind('error');
@@ -240,7 +249,6 @@ const Schedule: React.FC = () => {
             }
 
             const booked = toUIBooking(apiBooked as any);
-
             setBookings((prev) => {
                 const copy = { ...prev };
                 const arr = [...(copy[currentWeekIndex][dayStr] ?? Array(slotTimes.length).fill(null))];
@@ -248,7 +256,6 @@ const Schedule: React.FC = () => {
                 copy[currentWeekIndex] = { ...copy[currentWeekIndex], [dayStr]: arr };
                 return copy;
             });
-
             setNoticeKind('info');
             setNotice('Class booked.');
         } catch (e: any) {

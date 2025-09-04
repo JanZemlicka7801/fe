@@ -69,7 +69,24 @@ export async function bookClass(
     return text ? (JSON.parse(text) as BookedClass) : (undefined as any);
 }
 
-export async function cancelClass(token: string, id: string) {
-    return apiFetch(`/api/classes/${id}`, { method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` } });
+export async function cancelClass(token: string, classId: string) {
+    const res = await fetch(`/api/classes/${classId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        credentials: "include",
+    });
+
+    if (res.status === 409) {
+        const err = await res.json().catch(() => null as any);
+        const msg =
+            err?.code === "LATE_CANCELLATION_NOT_ALLOWED"
+                ? "You cannot cancel less than 12 hours before start."
+                : err?.message || "Cancellation not allowed.";
+        throw new HttpError(409, msg);
+    }
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new HttpError(res.status, text || `Cancel failed (${res.status})`);
+    }
 }
