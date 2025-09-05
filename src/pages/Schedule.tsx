@@ -20,6 +20,19 @@ const DEFAULT_INSTRUCTOR_ID =
     (window.__ENV__ && window.__ENV__.VITE_DEFAULT_INSTRUCTOR_ID) ||
     '11111111-1111-1111-1111-111111111111';
 
+const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const isFridayAfter5 = () => {
+    const now = new Date();
+    return now.getDay() === 5 && now.getHours() >= 17;
+};
+const shiftWeeksView = (weeksRaw: Date[][], want: number) => {
+    const dropped = weeksRaw.slice(1);
+    const last = dropped[dropped.length - 1] ?? weeksRaw[weeksRaw.length - 1];
+    const nextWeek = last.map((d) => addDays(d, 7));
+    const extended = [...dropped, nextWeek];
+    return extended.slice(0, want);
+};
+
 function Banner({
                     text,
                     kind = 'info',
@@ -74,9 +87,15 @@ const Schedule: React.FC = () => {
 
     const roleRaw = String(user?.role ?? '');
     const isStudentView = /^(student|learner)$/i.test(roleRaw);
-
+    const wantWeeks = isStudentView ? 2 : 3;
     const allWeeks = useMemo(() => generateWeeks(), []);
-    const weeks = useMemo(() => (isStudentView ? allWeeks.slice(0, 2) : allWeeks), [allWeeks, isStudentView]);
+    const weeks = useMemo(() => {
+        const raw = allWeeks as Date[][];
+        if (isFridayAfter5()) {
+            return shiftWeeksView(raw, wantWeeks);
+        }
+        return raw.slice(0, wantWeeks);
+    }, [allWeeks, wantWeeks]);
     const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
     const [bookings, setBookings] = useState<BookingsGrid>({});
 
