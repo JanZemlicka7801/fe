@@ -3,12 +3,18 @@ import ReactDOM from 'react-dom/client';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 import App from './App';
+import {AuthProvider} from "./contexts/AuthContext";
+import {ThemeProvider} from "./contexts/ThemeContext";
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    <React.StrictMode>
+        <ThemeProvider>
+            <AuthProvider>
+                <App />
+            </AuthProvider>
+        </ThemeProvider>
+    </React.StrictMode>
 );

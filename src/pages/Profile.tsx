@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { apiFetch } from "../services/api";
-import ChangePasswordModal from "../components/ChangePasswordModal"; // ← update path if needed
+import ChangePasswordModal from "../components/ChangePasswordModal";
+import { fmt, type LessonsResponse, type ClassDTO } from "./utils";
 
 type UserRole = "ADMIN" | "INSTRUCTOR" | "STUDENT" | string;
 
@@ -22,6 +23,7 @@ type LearnerProfileDTO = {
   lastName?: string;
   phoneNumber?: string;
   lessons?: number;
+  id?: string;
 };
 
 type InstructorProfileDTO = {
@@ -33,6 +35,8 @@ type InstructorProfileDTO = {
   experienceYears?: number;
   specialization?: string;
 };
+
+type DisplayNameDTO = { id: string; displayName: string };
 
 function Banner({
                   text,
@@ -63,7 +67,7 @@ function Banner({
 }
 
 const Profile: React.FC = () => {
-  const { token } = useAuth() as any;
+  const { token, user: authUser } = useAuth() as any;
 
   const [me, setMe] = useState<UserDTO | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +79,15 @@ const Profile: React.FC = () => {
   const [noticeKind, setNoticeKind] =
       useState<"info" | "warning" | "error" | "success">("info");
 
+  const [past, setPast] = useState<ClassDTO[]>([]);
+  const [pastLoading, setPastLoading] = useState(false);
+  const [pastErr, setPastErr] = useState<string | null>(null);
+
+  // instructor name cache and fetched-tracker to prevent repeat calls
+  const [instNames, setInstNames] = useState<Record<string, string>>({});
+  const fetchedIdsRef = useRef<Set<string>>(new Set());
+
+  // ---------- load profile ----------
   useEffect(() => {
     let abort = false;
     (async () => {
@@ -86,7 +99,9 @@ const Profile: React.FC = () => {
       try {
         setLoading(true);
         setLoadErr(null);
-        const data = (await apiFetch("users/me", { token })) as UserDTO;
+        const data = (await apiFetch("/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        })) as UserDTO;
         if (!abort) setMe(data);
       } catch (e: any) {
         if (!abort) setLoadErr(e?.message || "Failed to load profile");
@@ -98,6 +113,92 @@ const Profile: React.FC = () => {
       abort = true;
     };
   }, [token]);
+
+  const isStudent = useMemo(
+      () => /^(student|learner)$/i.test(String(me?.role ?? "")),
+      [me?.role]
+  );
+
+  // resolve learnerId, with fallback to user.id for learners
+  const learnerId = useMemo<string | null>(() => {
+    const fromAuth = authUser?.learner?.id ?? null;
+    const fromMe =
+        (me as any)?.learner?.id ??
+        (me as any)?.learner?.userId ??
+        null;
+    return fromAuth || fromMe || (isStudent ? me?.id ?? null : null);
+  }, [authUser, me, isStudent]);
+
+  // ---------- load past classes ----------
+  useEffect(() => {
+    if (!token || !learnerId) return;
+    let abort = false;
+    (async () => {
+      try {
+        setPastLoading(true);
+        setPastErr(null);
+        const res = (await apiFetch(`/classes/retrieve/${learnerId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })) as LessonsResponse;
+
+        const now = Date.now();
+        const onlyPast = (res.classes || []).filter((c) => {
+          const end = new Date((c as any).endsAt || c.startsAt).getTime();
+          return end < now;
+        });
+        onlyPast.sort(
+            (a, b) =>
+                new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()
+        );
+
+        if (!abort) setPast(onlyPast);
+      } catch (e: any) {
+        if (!abort) setPastErr(e?.message || "Failed to load past classes");
+      } finally {
+        if (!abort) setPastLoading(false);
+      }
+    })();
+    return () => {
+      abort = true;
+    };
+  }, [token, learnerId]);
+
+  // ---------- fetch instructor display names via /api/users/{id}/display-name ----------
+  useEffect(() => {
+    if (!token || past.length === 0) return;
+
+    const uniqueIds = Array.from(new Set(past.map((p) => p.instructorId))).filter(
+        (x): x is string => !!x
+    );
+
+    const missing = uniqueIds.filter(
+        (id) => !instNames[id] && !fetchedIdsRef.current.has(id)
+    );
+    if (missing.length === 0) return;
+
+    let abort = false;
+    (async () => {
+      const entries: [string, string][] = [];
+      for (const id of missing) {
+        fetchedIdsRef.current.add(id);
+        try {
+          const dto = (await apiFetch(`/users/${id}/display-name`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })) as DisplayNameDTO;
+          entries.push([id, dto.displayName || id]);
+        } catch {
+          entries.push([id, id]);
+        }
+      }
+      if (!abort && entries.length) {
+        setInstNames((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+      }
+    })();
+
+    return () => {
+      abort = true;
+    };
+  }, [token, past, instNames]);
 
   useEffect(() => {
     if (!notice) return;
@@ -120,7 +221,6 @@ const Profile: React.FC = () => {
 
   async function changePassword(current: string, next: string) {
     if (!token) throw new Error("Not signed in.");
-
     const res = await fetch("/api/auth/change-password", {
       method: "POST",
       headers: {
@@ -129,7 +229,6 @@ const Profile: React.FC = () => {
       },
       body: JSON.stringify({ currentPassword: current, newPassword: next }),
     });
-
     if (!res.ok) {
       const text = await res.text();
       throw new Error(text || `HTTP ${res.status}`);
@@ -157,7 +256,6 @@ const Profile: React.FC = () => {
 
   const isAdmin = me.role === "ADMIN";
   const isInstructor = me.role === "INSTRUCTOR";
-  const isStudent = me.role === "STUDENT";
 
   return (
       <div className="page-container">
@@ -227,7 +325,7 @@ const Profile: React.FC = () => {
                 )}
               </div>
 
-              {isStudent && (
+              {!isInstructor && (
                   <div className="detail-group">
                     <h3>Learner Details</h3>
                     {(me.learner?.firstName || me.learner?.lastName) && (
@@ -254,9 +352,7 @@ const Profile: React.FC = () => {
                         <div className="detail-item">
                           <span className="detail-label">Name:</span>{" "}
                           <span className="detail-value">
-                      {[me.instructor?.firstName, me.instructor?.lastName]
-                          .filter(Boolean)
-                          .join(" ")}
+                      {[me.instructor?.firstName, me.instructor?.lastName].filter(Boolean).join(" ")}
                     </span>
                         </div>
                     )}
@@ -287,15 +383,49 @@ const Profile: React.FC = () => {
                   Change Password
                 </button>
               </div>
+
+              {isStudent && (
+                  <div className="detail-group">
+                    <h3>Past classes</h3>
+                    {!learnerId && <p>No learner profile found.</p>}
+                    {learnerId && pastLoading && <p>Loading…</p>}
+                    {learnerId && pastErr && (
+                        <Banner text={pastErr} kind="error" onClose={() => setPastErr(null)} />
+                    )}
+                    {learnerId && !pastLoading && !pastErr && past.length === 0 && <p>No past classes.</p>}
+                    {learnerId && !pastLoading && !pastErr && past.length > 0 && (
+                        <div style={{ overflowX: "auto" }}>
+                          <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                            <tr>
+                              <th style={{ textAlign: "left", padding: "6px 8px" }}>Start</th>
+                              <th style={{ textAlign: "left", padding: "6px 8px" }}>End</th>
+                              <th style={{ textAlign: "left", padding: "6px 8px" }}>Instructor</th>
+                              <th style={{ textAlign: "left", padding: "6px 8px" }}>Type</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {past.map((c) => (
+                                <tr key={c.id}>
+                                  <td style={{ padding: "6px 8px" }}>{fmt(c.startsAt)}</td>
+                                  <td style={{ padding: "6px 8px" }}>{fmt(c.endsAt)}</td>
+                                  <td style={{ padding: "6px 8px" }}>
+                                    {instNames[c.instructorId] ?? "Loading…"}
+                                  </td>
+                                  <td style={{ padding: "6px 8px" }}>{c.type ?? ""}</td>
+                                </tr>
+                            ))}
+                            </tbody>
+                          </table>
+                        </div>
+                    )}
+                  </div>
+              )}
             </div>
           </div>
         </div>
 
-        <ChangePasswordModal
-            open={pwOpen}
-            onClose={() => setPwOpen(false)}
-            onSubmit={changePassword}
-        />
+        <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} onSubmit={changePassword} />
       </div>
   );
 };
