@@ -98,7 +98,7 @@ const Schedule: React.FC = () => {
     }, [allWeeks, wantWeeks]);
     const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
     const [bookings, setBookings] = useState<BookingsGrid>({});
-
+    const [busy, setBusy] = useState<Record<string, boolean>>({});
     const [notice, setNotice] = useState<string | null>(null);
     const [noticeKind, setNoticeKind] = useState<'info' | 'warning' | 'error'>('info');
 
@@ -185,7 +185,6 @@ const Schedule: React.FC = () => {
         const isStudent = /^(student|learner)$/i.test(String(user.role ?? ''));
         const current = bookings[currentWeekIndex]?.[dayStr]?.[slotIndex] ?? null;
 
-        // CANCEL existing booking
         if (current) {
             const isVacation = Boolean((current as any)?.cancelled);
             const madeByThisInstructor = (current as any)?.instructorId === user.id;
@@ -193,8 +192,7 @@ const Schedule: React.FC = () => {
 
             const canCancel =
                 isAdmin ||
-                (isInstructor && (isVacation ? madeByThisInstructor : true)) || // instructors can cancel their own; adjust if needed
-                (!isVacation && mine);
+                (isInstructor && (isVacation ? madeByThisInstructor : true)) || (!isVacation && mine);
 
             if (!canCancel) {
                 setNoticeKind('warning');
@@ -202,7 +200,6 @@ const Schedule: React.FC = () => {
                 return;
             }
 
-            // 12h cutoff applies to LEARNERS only
             if (!isAdmin && !isInstructor && mine) {
                 const startsAtISO = (current as any)?.start || (current as any)?.date;
                 const startsAt = new Date(startsAtISO);
@@ -219,6 +216,8 @@ const Schedule: React.FC = () => {
                 }
             }
 
+            if (busy[current.id]) return;
+            setBusy((b) => ({ ...b, [current.id]: true }));
             try {
                 await cancelClass(token, current.id);
                 setBookings((prev) => {
@@ -238,11 +237,12 @@ const Schedule: React.FC = () => {
                 }
                 setNoticeKind('error');
                 setNotice(e?.message ? String(e.message) : 'Cancel failed.');
+            } finally {
+                setBusy((b) => { const c = { ...b }; delete c[current.id]; return c; });
             }
             return;
         }
 
-        // BOOK new slot
         const day = new Date(dayStr);
         const { hour, minute } = parseSlotTime(slotTimes[slotIndex]);
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute, 0);

@@ -13,17 +13,15 @@ const toPlusCz = (p?: string | null) => {
 };
 
 export async function checkLearnerPhoneExists(phone: string, token: string) {
-    const res = await apiFetch<{ exists: boolean }>(
-        `/api/learners/exists-phone?phone=${encodeURIComponent(phone)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return !!res.exists;
+    const res = (await apiFetch(
+        `learners/exists-phone?phone=${encodeURIComponent(phone)}`,
+        { token }
+    )) as { exists: boolean };
+    return res.exists;
 }
 
 export async function fetchStudents(token: string): Promise<Student[]> {
-    const rows = await apiFetch<StudentPayload[]>('/api/learners', {
-        headers: { Authorization: `Bearer ${token}` },
-    });
+    const rows = (await apiFetch("learners", { token })) as StudentPayload[];
     return rows.map(r => ({
         id: r.id,
         name: `${r.firstName} ${r.lastName}`.trim(),
@@ -36,13 +34,26 @@ export async function fetchStudents(token: string): Promise<Student[]> {
     }));
 }
 
+export async function updateStudent(
+    learnerId: string,
+    dto: LearnerUpdateDTO,
+    token: string
+): Promise<Student> {
+    return (await apiFetch(`learners/${encodeURIComponent(learnerId)}`, {
+        method: 'PUT',
+        token,
+        body: JSON.stringify(dto),
+    })) as Student;
+}
+
 export async function addStudent(dto: StudentCreateDTO, token: string): Promise<Student> {
     try {
-        const res = await apiFetch<LearnerUserCreateResponseDTO>('/api/learners', {
+        const res = (await apiFetch('learners', {
             method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            token,
             body: JSON.stringify(dto),
-        });
+        })) as LearnerUserCreateResponseDTO;
+
         return {
             id: res.learnerId,
             name: `${res.firstName} ${res.lastName}`,
@@ -74,34 +85,15 @@ export type AppUser = {
 const displayPhone = (p: string) =>
     p.startsWith('00420') ? p.replace(/^00420/, '+420') : p;
 
-export async function updateStudent(
-    learnerId: string,
-    dto: LearnerUpdateDTO,
-    token: string
-): Promise<Student> {
-    return apiFetch<Student>(`/api/learners/${learnerId}`, {
-        method: 'PUT',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dto),
-    });
-}
 
 export async function fetchUsersByRoles(
     token: string,
-    roles: Array<'LEARNER' | 'INSTRUCTOR'> = ['LEARNER', 'INSTRUCTOR'],
+    roles: Array<'LEARNER' | 'INSTRUCTOR'> = ['LEARNER', 'INSTRUCTOR']
 ): Promise<AppUser[]> {
     const qs = `roles=${roles.join(',')}`;
-    return apiFetch<AppUser[]>(`/api/users?${qs}`, {
-        headers: { Authorization: `Bearer ${token}` },
-    });
+    return (await apiFetch(`users?${qs}`, { token })) as AppUser[];
 }
 
 export async function deleteStudent(learnerId: string, token: string): Promise<void> {
-    return apiFetch<void>(`/api/learners/${learnerId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-    });
+    await apiFetch(`learners/${encodeURIComponent(learnerId)}`, { method: 'DELETE', token });
 }

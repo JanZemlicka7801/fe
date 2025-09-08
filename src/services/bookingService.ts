@@ -15,7 +15,7 @@ export type BookedClass = {
 
 export async function fetchAllBookedClasses(token: string, fromISO: string, toISO: string) {
     const qs = `?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`;
-    return apiFetch<BookedClass[]>(`/api/classes/booked${qs}`, { token });
+    return (await apiFetch(`classes/booked${qs}`, { token })) as BookedClass[];
 }
 
 type BookOpts = { learnerId?: string; vacation?: boolean };
@@ -46,7 +46,6 @@ export async function bookClass(
     });
 
     if (res.status === 409) {
-        // Expecting { code, message, classId, startsAt, endsAt }
         const err = await res.json().catch(() => null as any);
         const when =
             err?.startsAt && err?.endsAt ? ` (${err.startsAt}–${err.endsAt})` : "";
@@ -69,24 +68,15 @@ export async function bookClass(
     return text ? (JSON.parse(text) as BookedClass) : (undefined as any);
 }
 
-export async function cancelClass(token: string, classId: string) {
-    const res = await fetch(`/api/classes/${classId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        credentials: "include",
-    });
-
-    if (res.status === 409) {
-        const err = await res.json().catch(() => null as any);
-        const msg =
-            err?.code === "LATE_CANCELLATION_NOT_ALLOWED"
-                ? "You cannot cancel less than 12 hours before start."
-                : err?.message || "Cancellation not allowed.";
-        throw new HttpError(409, msg);
-    }
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new HttpError(res.status, text || `Cancel failed (${res.status})`);
+export async function cancelClass(token: string, id: string): Promise<void> {
+    try {
+        await apiFetch(`/classes/${id}/cancel`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+        });
+    } catch (e: any) {
+        const status = e && typeof e === 'object' ? (e as any).status : 0;
+        if (status === 404 || status === 409 || status === 204) return;
+        throw e;
     }
 }

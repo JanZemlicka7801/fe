@@ -10,9 +10,5 @@ export type AdminStats = {
 
 export async function fetchAdminStats(token: string, weekStart?: string): Promise<AdminStats> {
     const qs = weekStart ? `?weekStart=${encodeURIComponent(weekStart)}` : '';
-    return apiFetch(`/api/admin/stats${qs}`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
+    return (await apiFetch(`admin/stats${qs}`, { token })) as AdminStats;
 }
