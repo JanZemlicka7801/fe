@@ -83,11 +83,9 @@ const Profile: React.FC = () => {
   const [pastLoading, setPastLoading] = useState(false);
   const [pastErr, setPastErr] = useState<string | null>(null);
 
-  // instructor name cache and fetched-tracker to prevent repeat calls
   const [instNames, setInstNames] = useState<Record<string, string>>({});
   const fetchedIdsRef = useRef<Set<string>>(new Set());
 
-  // ---------- load profile ----------
   useEffect(() => {
     let abort = false;
     (async () => {
@@ -119,7 +117,6 @@ const Profile: React.FC = () => {
       [me?.role]
   );
 
-  // resolve learnerId, with fallback to user.id for learners
   const learnerId = useMemo<string | null>(() => {
     const fromAuth = authUser?.learner?.id ?? null;
     const fromMe =
@@ -129,7 +126,6 @@ const Profile: React.FC = () => {
     return fromAuth || fromMe || (isStudent ? me?.id ?? null : null);
   }, [authUser, me, isStudent]);
 
-  // ---------- load past classes ----------
   useEffect(() => {
     if (!token || !learnerId) return;
     let abort = false;
@@ -163,7 +159,6 @@ const Profile: React.FC = () => {
     };
   }, [token, learnerId]);
 
-  // ---------- fetch instructor display names via /api/users/{id}/display-name ----------
   useEffect(() => {
     if (!token || past.length === 0) return;
 
@@ -248,7 +243,6 @@ const Profile: React.FC = () => {
   if (loadErr || !me) {
     return (
         <div className="page-container">
-          <h1 className="page-title">Profile</h1>
           <Banner text={loadErr || "No profile"} kind="error" onClose={() => setNotice(null)} />
         </div>
     );
@@ -259,7 +253,6 @@ const Profile: React.FC = () => {
 
   return (
       <div className="page-container">
-        <h1 className="page-title">Profile</h1>
 
         <Banner text={notice ?? ""} kind={noticeKind} onClose={() => setNotice(null)} />
 
@@ -325,7 +318,7 @@ const Profile: React.FC = () => {
                 )}
               </div>
 
-              {!isInstructor && (
+              {isStudent && (
                   <div className="detail-group">
                     <h3>Learner Details</h3>
                     {(me.learner?.firstName || me.learner?.lastName) && (
