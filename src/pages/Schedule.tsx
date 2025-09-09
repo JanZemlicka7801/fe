@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import Day from './Day';
+import Day, { parseSlotTime } from './Day';
 import { useAuth } from '../contexts/AuthContext';
 import { Booking, slotTimes, generateWeeks } from './utils';
-import { fetchAllBookedClasses, bookClass, cancelClass } from '../services/bookingService';
+import {
+    fetchAllBookedClasses,
+    bookClass,
+    cancelClass
+} from '../services/bookingService';
 import { HttpError } from '../services/api';
-import { parseSlotTime } from './Day';
 
 declare global { interface Window { __ENV__?: Record<string, string>; } }
 
@@ -21,57 +24,36 @@ const DEFAULT_INSTRUCTOR_ID =
     '11111111-1111-1111-1111-111111111111';
 
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-const isFridayAfter5 = () => {
-    const now = new Date();
-    return now.getDay() === 5 && now.getHours() >= 17;
-};
+const isFridayAfter5 = () => { const now = new Date(); return now.getDay() === 5 && now.getHours() >= 17; };
 const shiftWeeksView = (weeksRaw: Date[][], want: number) => {
     const dropped = weeksRaw.slice(1);
     const last = dropped[dropped.length - 1] ?? weeksRaw[weeksRaw.length - 1];
     const nextWeek = last.map((d) => addDays(d, 7));
-    const extended = [...dropped, nextWeek];
-    return extended.slice(0, want);
+    return [...dropped, nextWeek].slice(0, want);
 };
 
-function Banner({
-                    text,
-                    kind = 'info',
-                    onClose,
-                }: {
-    text: string;
-    kind?: 'info' | 'warning' | 'error';
-    onClose?: () => void;
+function Banner({ text, kind = 'info', onClose }:{
+    text: string; kind?: 'info'|'warning'|'error'; onClose?: () => void;
 }) {
     if (!text) return null;
-    const cls =
-        kind === 'warning' ? 'banner warning' : kind === 'error' ? 'banner error' : 'banner info';
+    const cls = kind === 'warning' ? 'banner warning' : kind === 'error' ? 'banner error' : 'banner info';
     return (
         <div className={cls} role="status" aria-live="polite">
             <span>{text}</span>
-            <button aria-label="Close notification" onClick={onClose}>
-                ×
-            </button>
+            <button aria-label="Close notification" onClick={onClose}>×</button>
         </div>
     );
 }
 
 type ApiBooked = {
-    id: string;
-    start: string;
-    end: string;
-    instructorId: string;
-    learnerId: string | null;
-    cancelled?: boolean;
+    id: string; start: string; end: string;
+    instructorId: string; learnerId: string | null; cancelled?: boolean;
 };
 
 const toUIBooking = (api: ApiBooked): Booking => {
     const base: Booking = {
-        id: api.id,
-        date: api.start,
-        teacher: '',
-        car: '',
-        learnerId: api.learnerId ?? '',
-        learnerFirstName: (api as any).learnerFirstName ?? '',
+        id: api.id, date: api.start, teacher: '', car: '',
+        learnerId: api.learnerId ?? '', learnerFirstName: (api as any).learnerFirstName ?? '',
         learnerLastName: (api as any).learnerLastName ?? '',
     };
     (base as any).cancelled = !!(api as any).cancelled;
@@ -82,20 +64,18 @@ const toUIBooking = (api: ApiBooked): Booking => {
 type BookingsGrid = Record<number, Record<string, (Booking | null)[]>>;
 
 const Schedule: React.FC = () => {
-    const auth = useAuth() as any;
-    const { user, token } = auth;
+    const { user, token } = useAuth() as any;
 
     const roleRaw = String(user?.role ?? '');
     const isStudentView = /^(student|learner)$/i.test(roleRaw);
     const wantWeeks = isStudentView ? 2 : 3;
+
     const allWeeks = useMemo(() => generateWeeks(), []);
     const weeks = useMemo(() => {
         const raw = allWeeks as Date[][];
-        if (isFridayAfter5()) {
-            return shiftWeeksView(raw, wantWeeks);
-        }
-        return raw.slice(0, wantWeeks);
+        return isFridayAfter5() ? shiftWeeksView(raw, wantWeeks) : raw.slice(0, wantWeeks);
     }, [allWeeks, wantWeeks]);
+
     const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
     const [bookings, setBookings] = useState<BookingsGrid>({});
     const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -114,13 +94,10 @@ const Schedule: React.FC = () => {
         return grid;
     };
 
-    useEffect(() => {
-        setCurrentWeekIndex((i) => Math.min(i, weeks.length - 1));
-    }, [weeks.length]);
+    useEffect(() => { setCurrentWeekIndex((i) => Math.min(i, weeks.length - 1)); }, [weeks.length]);
 
     useEffect(() => {
         if (!token) return;
-
         const grid = buildEmptyGrid();
 
         const firstCell: any = weeks[0][0];
@@ -128,18 +105,15 @@ const Schedule: React.FC = () => {
         const lastCell: any = lastRow[lastRow.length - 1];
 
         const from = new Date(firstCell?.date ?? firstCell); from.setHours(0, 0, 0, 0);
-        const to = new Date(lastCell?.date ?? lastCell); to.setHours(23, 59, 59, 999);
+        const to = new Date(lastCell?.date ?? lastCell);     to.setHours(23, 59, 59, 999);
 
         (async () => {
             try {
                 const all = (await fetchAllBookedClasses(
-                    token,
-                    toLocalDateTimeString(from),
-                    toLocalDateTimeString(to)
+                    token, toLocalDateTimeString(from), toLocalDateTimeString(to)
                 )) as ApiBooked[];
 
                 const filled = { ...grid };
-
                 all.forEach((bc) => {
                     const dt = new Date(bc.start);
                     const dayStr = dt.toDateString();
@@ -148,7 +122,6 @@ const Schedule: React.FC = () => {
                         return dt.getHours() === hour && dt.getMinutes() === minute;
                     });
                     if (slotIdx < 0) return;
-
                     for (let w = 0; w < weeks.length; w++) {
                         if (weeks[w].some((cell: any) => new Date(cell?.date ?? cell).toDateString() === dayStr)) {
                             if (!filled[w][dayStr]) filled[w][dayStr] = Array(slotTimes.length).fill(null);
@@ -157,12 +130,10 @@ const Schedule: React.FC = () => {
                         }
                     }
                 });
-
                 setBookings(filled);
             } catch (e) {
                 console.error('Failed to load booked classes:', e);
-                setNoticeKind('error');
-                setNotice('Failed to load schedule.');
+                setNoticeKind('error'); setNotice('Failed to load schedule.');
             }
         })();
     }, [token, weeks]);
@@ -173,12 +144,75 @@ const Schedule: React.FC = () => {
         return () => clearTimeout(t);
     }, [notice]);
 
-    const handleSlotToggle = async (dayStr: string, slotIndex: number) => {
-        if (!token || !user) {
-            setNoticeKind('error');
-            setNotice('You must be signed in to book.');
-            return;
+    const handleBlockDay = async (day: Date) => {
+        if (!token || !user) return;
+
+        const isAdmin = user.role === "ADMIN";
+        const isInstructor = user.role === "INSTRUCTOR";
+        if (!(isAdmin || isInstructor)) return;
+
+        if (!window.confirm("Block this entire day?")) return;
+
+        const instructorId = String(isInstructor ? user.id : DEFAULT_INSTRUCTOR_ID);
+        const requests: Array<Promise<any>> = [];
+
+        for (const s of slotTimes) {
+            const tm = parseSlotTime(s);
+            if (!tm) continue;
+            const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), tm.hour, tm.minute, 0);
+            const end = new Date(start.getTime() + SLOT_MINUTES * 60 * 1000);
+
+            requests.push(
+                bookClass(token, instructorId, toLocalDateTimeString(start), toLocalDateTimeString(end), {
+                    vacation: true,
+                })
+            );
         }
+
+        try {
+            const results = await Promise.allSettled(requests);
+            const okCount = results.filter((r) => r.status === "fulfilled").length;
+            const fail = results.find((r) => r.status === "rejected");
+
+            const firstDay = weeks[currentWeekIndex][0];
+            const lastDay = weeks[currentWeekIndex][weeks[currentWeekIndex].length - 1];
+            const from = new Date(firstDay);
+            from.setHours(0, 0, 0, 0);
+            const to = new Date(lastDay);
+            to.setHours(23, 59, 59, 999);
+
+            const fresh = (await fetchAllBookedClasses(
+                token,
+                toLocalDateTimeString(from),
+                toLocalDateTimeString(to)
+            )) as any[];
+
+            const filled = buildEmptyGrid();
+            fresh.forEach((bc) => {
+                const dt = new Date(bc.start);
+                const dayStr = dt.toDateString();
+                const slotIdx = slotTimes.findIndex((s) => {
+                    const { hour, minute } = parseSlotTime(s) || {};
+                    return dt.getHours() === hour && dt.getMinutes() === minute;
+                });
+                if (slotIdx >= 0) filled[currentWeekIndex][dayStr][slotIdx] = toUIBooking(bc);
+            });
+
+            setBookings(filled);
+            setNoticeKind(fail ? "warning" : "info");
+            setNotice(
+                fail
+                    ? `Blocked ${okCount} slots. Some could not be booked.`
+                    : "Day successfully blocked."
+            );
+        } catch (e: any) {
+            setNoticeKind("error");
+            setNotice(e?.message || "Failed to block day.");
+        }
+    };
+
+    const handleSlotToggle = async (dayStr: string, slotIndex: number) => {
+        if (!token || !user) { setNoticeKind('error'); setNotice('You must be signed in to book.'); return; }
 
         const isAdmin = user.role === 'ADMIN';
         const isInstructor = user.role === 'INSTRUCTOR';
@@ -186,35 +220,9 @@ const Schedule: React.FC = () => {
         const current = bookings[currentWeekIndex]?.[dayStr]?.[slotIndex] ?? null;
 
         if (current) {
-            const isVacation = Boolean((current as any)?.cancelled);
-            const madeByThisInstructor = (current as any)?.instructorId === user.id;
             const mine = !!current && (current.learnerId === user?.id || current.learnerId === user?.learner?.id);
-
-            const canCancel =
-                isAdmin ||
-                (isInstructor && (isVacation ? madeByThisInstructor : true)) || (!isVacation && mine);
-
-            if (!canCancel) {
-                setNoticeKind('warning');
-                setNotice('You cannot cancel this class.');
-                return;
-            }
-
-            if (!isAdmin && !isInstructor && mine) {
-                const startsAtISO = (current as any)?.start || (current as any)?.date;
-                const startsAt = new Date(startsAtISO);
-                const diffMs = startsAt.getTime() - Date.now();
-                if (!(startsAt instanceof Date && !isNaN(startsAt.getTime()))) {
-                    setNoticeKind('error');
-                    setNotice('Cannot determine class start time.');
-                    return;
-                }
-                if (diffMs < 12 * 60 * 60 * 1000) {
-                    setNoticeKind('warning');
-                    setNotice('You cannot cancel less than 12 hours before start.');
-                    return;
-                }
-            }
+            const canCancel = isAdmin || isInstructor || mine;
+            if (!canCancel) { setNoticeKind('warning'); setNotice('You cannot cancel this class.'); return; }
 
             if (busy[current.id]) return;
             setBusy((b) => ({ ...b, [current.id]: true }));
@@ -227,16 +235,9 @@ const Schedule: React.FC = () => {
                     copy[currentWeekIndex] = { ...copy[currentWeekIndex], [dayStr]: arr };
                     return copy;
                 });
-                setNoticeKind('info');
-                setNotice('Class canceled.');
-            } catch (e: any) {
-                if (e instanceof HttpError && e.status === 409) {
-                    setNoticeKind('warning');
-                    setNotice(e.message);
-                    return;
-                }
-                setNoticeKind('error');
-                setNotice(e?.message ? String(e.message) : 'Cancel failed.');
+                setNoticeKind('info'); setNotice('Class canceled.');
+            } catch (e:any) {
+                setNoticeKind('error'); setNotice(e?.message || 'Cancel failed.');
             } finally {
                 setBusy((b) => { const c = { ...b }; delete c[current.id]; return c; });
             }
@@ -247,26 +248,10 @@ const Schedule: React.FC = () => {
         const { hour, minute } = parseSlotTime(slotTimes[slotIndex]);
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute, 0);
         const end = new Date(start.getTime() + SLOT_MINUTES * 60 * 1000);
-        const existingDay = bookings[currentWeekIndex]?.[dayStr] ?? [];
-        const inferred = (existingDay.find((b) => !!b) as any)?.instructorId;
-        const instructorId = String(isInstructor ? user.id : inferred || DEFAULT_INSTRUCTOR_ID);
+        const instructorId = String(isInstructor ? user.id : DEFAULT_INSTRUCTOR_ID);
 
         try {
-            let apiBooked;
-            if (isAdmin || isInstructor) {
-                apiBooked = await bookClass(
-                    token, instructorId, toLocalDateTimeString(start), toLocalDateTimeString(end), { vacation: true }
-                );
-            } else if (isStudent) {
-                apiBooked = await bookClass(
-                    token, instructorId, toLocalDateTimeString(start), toLocalDateTimeString(end)
-                );
-            } else {
-                setNoticeKind('error');
-                setNotice('Unknown role.');
-                return;
-            }
-
+            const apiBooked = await bookClass(token, instructorId, toLocalDateTimeString(start), toLocalDateTimeString(end));
             const booked = toUIBooking(apiBooked as any);
             setBookings((prev) => {
                 const copy = { ...prev };
@@ -275,17 +260,10 @@ const Schedule: React.FC = () => {
                 copy[currentWeekIndex] = { ...copy[currentWeekIndex], [dayStr]: arr };
                 return copy;
             });
-            setNoticeKind('info');
-            setNotice('Class booked.');
-        } catch (e: any) {
-            if (e instanceof HttpError && e.status === 409) {
-                setNoticeKind('warning');
-                setNotice(e.message);
-                return;
-            }
-            console.error('Booking failed:', e);
-            setNoticeKind('error');
-            setNotice(e?.message ? String(e.message) : 'Booking failed.');
+            setNoticeKind('info'); setNotice('Class booked.');
+        } catch (e:any) {
+            if (e instanceof HttpError && e.status === 409) { setNoticeKind('warning'); setNotice(e.message); return; }
+            setNoticeKind('error'); setNotice(e?.message || 'Booking failed.');
         }
     };
 
@@ -316,15 +294,25 @@ const Schedule: React.FC = () => {
             <div className="row row-cols-1 row-cols-md-5 g-3 align-items-stretch">
                 {weeks[currentWeekIndex].map((cell: any) => {
                     const day: Date = new Date(cell?.date ?? cell);
+                    const dayKey = day.toDateString();
                     return (
-                        <div className="col d-flex" key={day.toDateString()}>
-                            <Day
-                                date={day}
-                                dayBookings={
-                                    bookings[currentWeekIndex]?.[day.toDateString()] ?? Array(slotTimes.length).fill(null)
-                                }
-                                toggleSlot={handleSlotToggle}
-                            />
+                        <div className="col d-flex flex-column" key={dayKey}>
+                            <div className="card h-100 d-flex flex-column">
+                                    <Day
+                                        date={day}
+                                        dayBookings={bookings[currentWeekIndex]?.[dayKey] ?? Array(slotTimes.length).fill(null)}
+                                        toggleSlot={handleSlotToggle}
+                                    />
+
+                                    {(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+                                        <button
+                                            className="btn btn-outline-danger w-100 align-self-end"
+                                            onClick={() => handleBlockDay(day)}
+                                        >
+                                            Block Day
+                                        </button>
+                                    )}
+                            </div>
                         </div>
                     );
                 })}
