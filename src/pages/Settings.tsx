@@ -4,15 +4,15 @@ import { useTheme, type Theme } from '../contexts/ThemeContext';
 
 const Settings: React.FC = () => {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'notifications'|'appearance'|'advanced'|'system'|'users'|'backup'>('appearance');
+  const [activeTab, setActiveTab] = useState<
+      'notifications'|'appearance'|'advanced'|'help'|'system'|'users'|'backup'
+  >('help');
 
   // theme
   const { theme, resolved, setTheme } = useTheme();
   const [pendingTheme, setPendingTheme] = useState<Theme>(theme);
-
   useEffect(() => { setPendingTheme(theme); }, [theme]);
 
-  // demo persistence for notifications (local only)
   const [emailBookings, setEmailBookings] = useState(true);
   const [emailCancels, setEmailCancels] = useState(true);
   const [emailReminders, setEmailReminders] = useState(true);
@@ -44,6 +44,7 @@ const Settings: React.FC = () => {
 
         <div className="settings-container">
           <div className="settings-sidebar">
+            <div className={`settings-tab ${activeTab === 'help' ? 'active' : ''}`} onClick={() => setActiveTab('help')}>Help</div>
             <div className={`settings-tab ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>Notifications</div>
             <div className={`settings-tab ${activeTab === 'appearance' ? 'active' : ''}`} onClick={() => setActiveTab('appearance')}>Appearance</div>
             <div className={`settings-tab ${activeTab === 'advanced' ? 'active' : ''}`} onClick={() => setActiveTab('advanced')}>Advanced</div>
@@ -140,6 +141,22 @@ const Settings: React.FC = () => {
                   <button className="btn-secondary" onClick={() => navigator.clipboard.writeText(JSON.stringify({theme, resolved}))}>
                     Copy current theme info
                   </button>
+                </div>
+            )}
+
+            {activeTab === 'help' && (
+                <div className="settings-panel">
+                  <h2>Help</h2>
+                  <p>
+                    Please in any case of issues call{" "}
+                    <a href="tel:+420605232579" style={{ fontWeight: 600, color: "var(--primary)" }}>
+                      605&nbsp;232&nbsp;579
+                    </a>{" "}
+                    or send an email to{" "}
+                    <a href="mailto:autoaba@seznam.cz" style={{ fontWeight: 600, color: "var(--primary)" }}>
+                      autoaba@seznam.cz
+                    </a>.
+                  </p>
                 </div>
             )}
 
