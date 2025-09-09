@@ -3,8 +3,8 @@ import React, {createContext, useContext, useEffect, useMemo, useState} from "re
 export type Theme = "light" | "dark" | "system";
 
 type Ctx = {
-    theme: Theme;                 // user choice
-    resolved: "light" | "dark";   // actual applied
+    theme: Theme;
+    resolved: "light" | "dark";
     setTheme: (t: Theme) => void;
 };
 
@@ -27,12 +27,10 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({children}) => 
         [theme]
     );
 
-    // apply to <html data-theme="light|dark">
     useEffect(() => {
         document.documentElement.setAttribute("data-theme", resolved);
     }, [resolved]);
 
-    // react to OS changes when in system mode
     useEffect(() => {
         if (theme !== "system") return;
         const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -41,7 +39,6 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({children}) => 
         return () => mq.removeEventListener?.("change", onChange);
     }, [theme]);
 
-    // persist
     useEffect(() => {
         localStorage.setItem("theme", theme);
     }, [theme]);
