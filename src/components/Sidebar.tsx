@@ -8,8 +8,7 @@ const Sidebar: React.FC = () => {
     const location = useLocation();
 
     const handleLogout = () => {
-        logout();
-        navigate('/login');
+        logout(() => navigate('/auth'));
     };
 
     return (
@@ -20,7 +19,7 @@ const Sidebar: React.FC = () => {
             <div className="sidebar-menu">
                 {isAuthenticated && (
                     <>
-                        <Link to="/" className={`sidebar-item ${location.pathname === '/' ? 'active' : ''}`}>
+                        <Link to="/schedule" className={`sidebar-item ${location.pathname === '/schedule' ? 'active' : ''}`}>
                             <span>Přehled</span>
                         </Link>
 
@@ -56,11 +55,8 @@ const Sidebar: React.FC = () => {
 
                 {!isAuthenticated ? (
                     <>
-                        <Link to="/login" className="sidebar-item">
+                        <Link to="/auth" className="sidebar-item">
                             <span>Přihlásit se</span>
-                        </Link>
-                        <Link to="/register" className="sidebar-item">
-                            <span>Registrovat</span>
                         </Link>
                     </>
                 ) : (

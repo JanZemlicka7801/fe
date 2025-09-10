@@ -17,6 +17,7 @@ import UserManagement from './pages/admin/UserManagement';
 import Sidebar from './components/Sidebar';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AdminRoute from './components/AdminRoute';
+import FirstLogin from './pages/FirstLogin';
 
 import './App.css';
 
@@ -67,73 +68,49 @@ const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <>{children}</>;
 };
 
-function App() {
+const FirstLoginRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { isAuthenticated, isLoading, user } = useAuth();
+    if (isLoading) return <div className="loading">Loading...</div>;
+    if (!isAuthenticated) return <Navigate to="/auth" replace />;
+    if (user?.validated) return <Navigate to="/" replace />;
+    return <>{children}</>;
+};
+
+const ValidatedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { isAuthenticated, isLoading, user } = useAuth();
+    if (isLoading) return <div className="loading">Loading...</div>;
+    if (!isAuthenticated) return <Navigate to="/auth" replace />;
+    if (!user?.validated) return <Navigate to="/first-login" replace />;
+    return <>{children}</>;
+};
+
+function AppRoutes() {
     return (
-        <AuthProvider>
-            <Router>
-                <Routes>
-                    <Route path="/auth" element={<AuthPage />} />
-
-                    <Route
-                        path="/"
-                        element={
-                            <UserRoute>
-                                <Layout>
-                                    <main className="container">
-                                        <Schedule />
-                                    </main>
-                                </Layout>
-                            </UserRoute>
-                        }
-                    />
-                    <Route
-                        path="/profile"
-                        element={
-                            <UserRoute>
-                                <Layout><Profile /></Layout>
-                            </UserRoute>
-                        }
-                    />
-                    <Route
-                        path="/settings"
-                        element={
-                            <UserRoute>
-                                <Layout><Settings /></Layout>
-                            </UserRoute>
-                        }
-                    />
-
-                    {/* Admin-only routes */}
-                    <Route
-                        path="/students"
-                        element={
-                            <AdminRoute>
-                                <Layout><Students /></Layout>
-                            </AdminRoute>
-                        }
-                    />
-                    <Route
-                        path="/admin"
-                        element={
-                            <AdminRoute>
-                                <Layout><AdminDashboard /></Layout>
-                            </AdminRoute>
-                        }
-                    />
-                    <Route
-                        path="/admin/users"
-                        element={
-                            <AdminRoute>
-                                <Layout><UserManagement /></Layout>
-                            </AdminRoute>
-                        }
-                    />
-
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </Router>
-        </AuthProvider>
+        <Routes>
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/first-login" element={
+                <FirstLoginRoute>
+                    <FirstLogin />
+                </FirstLoginRoute>
+            } />
+            <Route path="/schedule" element={<ValidatedRoute><Layout><Schedule /></Layout></ValidatedRoute>} />
+            <Route path="/profile" element={<ValidatedRoute><Layout><Profile /></Layout></ValidatedRoute>} />
+            <Route path="/settings" element={<ValidatedRoute><Layout><Settings /></Layout></ValidatedRoute>} />
+            <Route path="/students" element={<AdminRoute><Layout><Students /></Layout></AdminRoute>} />
+            <Route path="/admin" element={<AdminRoute><Layout><AdminDashboard /></Layout></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><Layout><UserManagement /></Layout></AdminRoute>} />
+            <Route path="/" element={<Navigate to="/auth" replace />} />
+            <Route path="*" element={<Navigate to="/auth" replace />} />
+        </Routes>
     );
 }
+
+const App: React.FC = () => (
+    <AuthProvider>
+        <Router>
+            <AppRoutes />
+        </Router>
+    </AuthProvider>
+);
 
 export default App;

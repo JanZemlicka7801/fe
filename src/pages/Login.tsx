@@ -33,7 +33,13 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
         if (validateForm()) {
             try {
                 const u = await login(email, password);
-                if (u) navigate('/');
+                if (u) {
+                    if (!u.validated) {
+                        navigate('/first-login');
+                    } else {
+                        navigate('/schedule');
+                    }
+                }
             } catch (err) {
                 console.error('Login attempt failed:', err);
             }

@@ -1,53 +1,113 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import backgroundImage from '../images/background.jpg';
+
+const MIN_LENGTH = 8;
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
 const FirstLogin: React.FC = () => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [formErrors, setFormErrors] = useState<{ newPassword?: string; confirmPassword?: string } >({});
     const [error, setError] = useState('');
+    const [busy, setBusy] = useState(false);
     const navigate = useNavigate();
+    const { user, token, setError: setAuthError } = useAuth();
+
+    const validateForm = (): boolean => {
+        const errors: any = {};
+        if (newPassword.length < MIN_LENGTH) {
+            errors.newPassword = 'Heslo musí mít alespoň 8 znaků';
+        } else if (!PASSWORD_REGEX.test(newPassword)) {
+            errors.newPassword = 'Heslo musí obsahovat alespoň jedno číslo a jedno písmeno';
+        }
+        if (newPassword !== confirmPassword) {
+            errors.confirmPassword = 'Hesla se neshodují';
+        }
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newPassword !== confirmPassword) {
-            setError("Passwords do not match");
-            return;
-        }
-
+        if (!validateForm()) return;
+        setBusy(true);
+        setError('');
         try {
-            const token = localStorage.getItem('token');
-            await axios.post('/api/auth/set-password', { newPassword }, {
-                headers: { Authorization: `Bearer ${token}` }
+            const res = await fetch('/api/auth/set-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ newPassword }),
             });
-
-            navigate('/');
-        } catch (err) {
-            setError("Failed to set password");
-            console.error(err);
+            if (!res.ok) throw new Error('Failed to set password');
+            if (user) {
+                const updatedUser = { ...user, validated: true };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+            setAuthError(null);
+            navigate('/schedule');
+        } catch (err: any) {
+            setError('Nepodařilo se nastavit heslo');
+        } finally {
+            setBusy(false);
         }
     };
 
     return (
-        <div className="first-login-form">
-            <h2>Set Your Password</h2>
-            <p>This is your first time logging in. Please set a new password.</p>
-            {error && <div className="error">{error}</div>}
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="password"
-                    placeholder="New Password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                />
-                <input
-                    type="password"
-                    placeholder="Confirm Password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                <button type="submit">Set Password</button>
-            </form>
+        <div
+            className="auth-container"
+            style={{
+                backgroundImage: `url(${backgroundImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+            }}
+        >
+            <div className="auth-card">
+                <div className="auth-header">
+                    <h2>Nastavení hesla</h2>
+                    <p>Jste tu poprvé. Prosím nastavte si nové heslo.</p>
+                </div>
+                <form className="auth-form" onSubmit={handleSubmit} noValidate autoComplete="off">
+                    {error && <div className="auth-error">{error}</div>}
+                    <div className="form-group">
+                        <label htmlFor="newPassword">Nové heslo</label>
+                        <input
+                            type="password"
+                            id="newPassword"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className={formErrors.newPassword ? 'input-error' : ''}
+                            disabled={busy}
+                        />
+                        {formErrors.newPassword && <div className="error-message">{formErrors.newPassword}</div>}
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="confirmPassword">Potvrdit heslo</label>
+                        <input
+                            type="password"
+                            id="confirmPassword"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className={formErrors.confirmPassword ? 'input-error' : ''}
+                            disabled={busy}
+                        />
+                        {formErrors.confirmPassword && <div className="error-message">{formErrors.confirmPassword}</div>}
+                    </div>
+                    <div className="form-actions">
+                        <button type="submit" className="btn-primary btn-block" disabled={busy}>
+                            {busy ? 'Nastavuji...' : 'Nastavit heslo'}
+                        </button>
+                    </div>
+                </form>
+                <div className="auth-footer">
+                    <p></p>
+                </div>
+            </div>
         </div>
     );
 };

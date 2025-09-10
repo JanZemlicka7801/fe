@@ -29,7 +29,7 @@ export interface AuthContextValue {
   error: string | null;
   setError: (msg: string | null) => void;
   login: (email: string, password: string) => Promise<User | null>;
-  logout: () => void;
+  logout: (callback?: () => void) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -101,12 +101,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({children}) => {
     }
   };
 
-  const logout = () => {
+  const logout = (callback?: () => void) => {
     setUser(null);
     setToken(null);
     setError(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Execute callback if provided (e.g., for navigation)
+    if (callback) {
+      callback();
+    }
   };
 
   const isAdmin = useMemo(() => user?.role === 'ADMIN', [user]);
