@@ -147,6 +147,20 @@ const Schedule: React.FC = () => {
     const handleBlockDay = async (day: Date) => {
         if (!token || !user) return;
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const blockDay = new Date(day);
+        blockDay.setHours(0, 0, 0, 0);
+        if (blockDay < today) {
+            setNoticeKind("warning");
+            setNotice("You cannot block a day in the past.");
+            return;
+        } else if (blockDay.getTime() === today.getTime() && new Date().getHours() >= 17) {
+            setNoticeKind("warning");
+            setNotice("You cannot block the rest of today after 5 PM.");
+            return;
+        }
+
         const isAdmin = user.role === "ADMIN";
         const isInstructor = user.role === "INSTRUCTOR";
         if (!(isAdmin || isInstructor)) return;
@@ -309,7 +323,7 @@ const Schedule: React.FC = () => {
                                             className="btn btn-outline-danger w-100 align-self-end"
                                             onClick={() => handleBlockDay(day)}
                                         >
-                                            Block Day
+                                            <strong>Block Day</strong>
                                         </button>
                                     )}
                             </div>
@@ -322,3 +336,4 @@ const Schedule: React.FC = () => {
 };
 
 export default Schedule;
+
