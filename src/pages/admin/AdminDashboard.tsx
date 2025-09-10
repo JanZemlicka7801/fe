@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchAdminStats, type AdminStats } from '../../services/adminService';
 import {Link} from "react-router-dom";
+import NotificationForm from "../../components/admin/NotificationForm";
 
 const AdminDashboard: React.FC = () => {
   const { user, token } = useAuth() as any;
@@ -25,16 +26,6 @@ const AdminDashboard: React.FC = () => {
       <div className="page-container">
 
         <div className="admin-dashboard">
-          <div className="admin-welcome">
-            <h2>Vítejte, {name}!</h2>
-            <p>Toto je adminova nástěnka, kde je možné pracovat s celkovým systémem.</p>
-            {stats && (
-                <p className="text-muted">
-                  Aktuální týden od {stats.weekStart} do {stats.weekEnd}
-                </p>
-            )}
-            {error && <p className="error-text">{error}</p>}
-          </div>
 
           <div className="admin-stats">
             <div className="stats-card">
@@ -55,6 +46,19 @@ const AdminDashboard: React.FC = () => {
               <p>Naplánováno na tento týden</p>
             </div>
           </div>
+
+          <div className="admin-welcome">
+            <h2>Vítejte, {name}!</h2>
+            <p>Toto je adminova nástěnka, kde je možné pracovat s celkovým systémem.</p>
+            {stats && (
+                <p className="text-muted">
+                  Aktuální týden od {stats.weekStart} do {stats.weekEnd}
+                </p>
+            )}
+            {error && <p className="error-text">{error}</p>}
+          </div>
+
+          <NotificationForm />
 
           <div className="admin-actions">
             <h3>Rychlé pokyny</h3>

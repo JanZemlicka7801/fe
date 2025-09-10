@@ -1491,3 +1491,61 @@ main {
 .validation-list li.invalid {
   color: rgb(65, 68, 76);
 }
+
+.notification-form-container {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.notification-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.notification-form .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-form label {
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.notification-form input,
+.notification-form textarea {
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.notification-form textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.notification-form .error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.notification-form .success-message {
+  color: #28a745;
+  background-color: #d4edda;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.notification-form button {
+  align-self: flex-start;
+  padding: 10px 20px;
+}

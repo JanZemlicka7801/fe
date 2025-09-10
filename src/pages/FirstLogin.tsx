@@ -13,7 +13,7 @@ const FirstLogin: React.FC = () => {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
     const navigate = useNavigate();
-    const { user, token, setError: setAuthError } = useAuth();
+    const { user, token, setError: setAuthError, updateUser } = useAuth();
 
     const validateForm = (): boolean => {
         const errors: any = {};
@@ -46,7 +46,7 @@ const FirstLogin: React.FC = () => {
             if (!res.ok) throw new Error('Failed to set password');
             if (user) {
                 const updatedUser = { ...user, validated: true };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
+                updateUser(updatedUser);
             }
             setAuthError(null);
             navigate('/schedule');

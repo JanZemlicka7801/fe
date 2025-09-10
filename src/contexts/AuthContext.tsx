@@ -30,6 +30,7 @@ export interface AuthContextValue {
   setError: (msg: string | null) => void;
   login: (email: string, password: string) => Promise<User | null>;
   logout: (callback?: () => void) => void;
+  updateUser: (updatedUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -126,6 +127,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({children}) => {
     logout,
     error,
     setError,
+    updateUser: (updatedUser: User) => {
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
