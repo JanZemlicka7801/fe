@@ -68,11 +68,15 @@ export async function bookClass(
     return text ? (JSON.parse(text) as BookedClass) : (undefined as any);
 }
 
-export async function cancelClass(token: string, id: string): Promise<void> {
+export async function cancelClass(token: string, id: string, options: { isAdmin?: boolean; isInstructor?: boolean } = {}): Promise<void> {
     try {
+        // If user is admin or instructor, include vacation flag to bypass learnerId requirement
+        const isAdminOrInstructor = options.isAdmin || options.isInstructor;
+        
         await apiFetch(`/classes/${id}/cancel`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
+            body: isAdminOrInstructor ? { vacation: true } : undefined
         });
     } catch (e: any) {
         const status = e && typeof e === 'object' ? (e as any).status : 0;

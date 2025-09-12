@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Login from './Login';
 
 import backgroundImage from '../images/background.jpg';
@@ -8,12 +9,23 @@ const AuthPage: React.FC = () => {
     const transitionRef = useRef<HTMLDivElement>(null);
     const [cardHeight, setCardHeight] = useState<number | string>('auto');
     const { setError } = useAuth();
+    const location = useLocation();
 
     useEffect(() => {
         if (transitionRef.current) {
             setCardHeight(transitionRef.current.offsetHeight);
         }
     }, []);
+    
+    // Check for message in location state (e.g., from token expiration)
+    useEffect(() => {
+        const state = location.state as { message?: string } | null;
+        if (state?.message) {
+            setError(state.message);
+            // Clear the message from location state to prevent showing it again on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location, setError]);
 
     return (
         <div

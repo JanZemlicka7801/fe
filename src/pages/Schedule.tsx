@@ -241,7 +241,11 @@ const Schedule: React.FC = () => {
             if (busy[current.id]) return;
             setBusy((b) => ({ ...b, [current.id]: true }));
             try {
-                await cancelClass(token, current.id);
+                // Pass user role information to cancelClass
+                await cancelClass(token, current.id, { 
+                    isAdmin, 
+                    isInstructor 
+                });
                 setBookings((prev) => {
                     const copy = { ...prev };
                     const arr = [...(copy[currentWeekIndex][dayStr] ?? Array(slotTimes.length).fill(null))];
@@ -282,7 +286,7 @@ const Schedule: React.FC = () => {
     };
 
     return (
-        <div>
+        <div className="page-container">
             <Banner text={notice ?? ''} kind={noticeKind} onClose={() => setNotice(null)} />
 
             <div className="week-navigation mb-3 d-flex align-items-center gap-2">

@@ -41,6 +41,7 @@ const Students: React.FC = () => {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     if (!token) {
@@ -64,7 +65,7 @@ const Students: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, refreshTrigger]);
 
   useEffect(() => {
     if (!token) {
@@ -136,8 +137,15 @@ const Students: React.FC = () => {
       const added = await addStudent(studentData, token);
       const status: Student['status'] =
           (added as any).status ?? ((added as any).validated ? 'active' : 'inactive');
+      
+      // First update the students list
       setStudents((prev) => [...prev, { ...added, status }]);
+      // Then close the modal
       setIsAddModalOpen(false);
+      // Finally trigger a refresh - ensure this happens after state updates
+      setTimeout(() => {
+        setRefreshTrigger(prev => prev + 1); // Trigger a refresh with a slight delay
+      }, 100);
     } catch (err: any) {
       setAddStudentError(err.message);
     }
@@ -155,8 +163,14 @@ const Students: React.FC = () => {
     if (!token || !studentToDelete) return;
     try {
       await deleteStudent(studentToDelete.id, token);
+      // Update the students list
       setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
+      // Clear selected student if it was deleted
       if (selectedStudent?.id === studentToDelete.id) setSelectedStudent(null);
+      // Trigger a refresh with a slight delay to ensure state updates complete
+      setTimeout(() => {
+        setRefreshTrigger(prev => prev + 1); // Trigger a refresh after deleting a student
+      }, 100);
     } catch (error: any) {
       alert(`Error deleting student: ${error.message}`);
     } finally {
@@ -179,11 +193,17 @@ const Students: React.FC = () => {
     setStudentToEdit(null);
   };
   const onEdited = (u: { id: string; name: string; email: string; phone: string }) => {
+    // Update the students list
     setStudents((prev) =>
         prev.map((s) => (s.id === u.id ? { ...s, name: u.name, email: u.email, phone: u.phone } : s))
     );
+    // Update selected student if it was edited
     if (selectedStudent?.id === u.id)
       setSelectedStudent((p) => (p ? { ...p, name: u.name, email: u.email, phone: u.phone } : p));
+    // Trigger a refresh with a slight delay to ensure state updates complete
+    setTimeout(() => {
+      setRefreshTrigger(prev => prev + 1); // Trigger a refresh after editing a student
+    }, 100);
   };
 
   if (isLoading) return <div className="page-container"><p>Loading students...</p></div>;
