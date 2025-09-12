@@ -8,13 +8,33 @@ import { useAuth } from '../contexts/AuthContext';
 const AuthPage: React.FC = () => {
     const transitionRef = useRef<HTMLDivElement>(null);
     const [cardHeight, setCardHeight] = useState<number | string>('auto');
-    const { setError } = useAuth();
+    const { error, setError } = useAuth();
     const location = useLocation();
+    const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
+    // Use ResizeObserver to dynamically update card height when content changes
     useEffect(() => {
         if (transitionRef.current) {
+            // Initial height setting
             setCardHeight(transitionRef.current.offsetHeight);
+            
+            // Create ResizeObserver to watch for content size changes
+            resizeObserverRef.current = new ResizeObserver(entries => {
+                for (const entry of entries) {
+                    setCardHeight(entry.contentRect.height);
+                }
+            });
+            
+            // Start observing the content div
+            resizeObserverRef.current.observe(transitionRef.current);
         }
+        
+        // Cleanup observer on unmount
+        return () => {
+            if (resizeObserverRef.current) {
+                resizeObserverRef.current.disconnect();
+            }
+        };
     }, []);
     
     // Check for message in location state (e.g., from token expiration)

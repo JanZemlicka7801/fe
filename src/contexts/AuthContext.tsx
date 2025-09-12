@@ -64,7 +64,29 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({children}) => {
         body: JSON.stringify({email, password}),
       });
       if (!res.ok) {
-        setError(res.status === 401 ? 'Invalid credentials' : `Login failed (${res.status})`);
+        // Handle different error status codes with more user-friendly messages
+        switch (res.status) {
+          case 401:
+            setError('Nesprávné přihlašovací údaje. Zkontrolujte prosím email a heslo.');
+            break;
+          case 403:
+            setError('Váš účet byl zablokován. Kontaktujte prosím správce systému.');
+            break;
+          case 404:
+            setError('Uživatel s tímto emailem nebyl nalezen.');
+            break;
+          case 429:
+            setError('Příliš mnoho pokusů o přihlášení. Zkuste to prosím později.');
+            break;
+          case 500:
+          case 502:
+          case 503:
+          case 504:
+            setError('Chyba serveru. Zkuste to prosím později nebo kontaktujte podporu.');
+            break;
+          default:
+            setError(`Přihlášení selhalo (${res.status}). Zkuste to prosím znovu.`);
+        }
         return null;
       }
 
@@ -95,7 +117,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({children}) => {
       localStorage.setItem('user', JSON.stringify(u));
       return u;
     } catch (e: any) {
-      setError(e?.message ?? 'Login error');
+      // Handle network errors and other exceptions with user-friendly messages
+      if (e.name === 'TypeError' && e.message.includes('Failed to fetch')) {
+        setError('Nelze se připojit k serveru. Zkontrolujte prosím své internetové připojení.');
+      } else if (e.name === 'AbortError') {
+        setError('Požadavek byl přerušen. Zkuste to prosím znovu.');
+      } else if (e.name === 'TimeoutError' || (e.message && e.message.includes('timeout'))) {
+        setError('Připojení k serveru vypršelo. Zkuste to prosím později.');
+      } else {
+        setError(e?.message ? `Chyba přihlášení: ${e.message}` : 'Neznámá chyba přihlášení. Zkuste to prosím znovu.');
+      }
+      console.error('Login error:', e);
       return null;
     } finally {
       setIsLoading(false);
