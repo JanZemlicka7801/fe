@@ -28,9 +28,6 @@ const Sidebar: React.FC = () => {
                                 <Link to="/profile" className={`sidebar-item ${location.pathname === '/profile' ? 'active' : ''}`}>
                                     <span>Profil</span>
                                 </Link>
-                                <Link to="/settings" className={`sidebar-item ${location.pathname === '/settings' ? 'active' : ''}`}>
-                                    <span>Nastavení</span>
-                                </Link>
                             </>
                         )}
 
@@ -44,9 +41,6 @@ const Sidebar: React.FC = () => {
                                 </Link>
                                 <Link to="/profile" className={`sidebar-item ${location.pathname === '/profile' ? 'active' : ''}`}>
                                     <span>Profil</span>
-                                </Link>
-                                <Link to="/settings" className={`sidebar-item ${location.pathname === '/settings' ? 'active' : ''}`}>
-                                    <span>Nastavení</span>
                                 </Link>
                             </>
                         )}

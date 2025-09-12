@@ -9,7 +9,6 @@ import {
 
 import Schedule from './pages/Schedule';
 import Profile from './pages/Profile';
-import Settings from './pages/Settings';
 import Students from './pages/Students';
 import AuthPage from './pages/AuthPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -18,6 +17,7 @@ import Sidebar from './components/Sidebar';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AdminRoute from './components/AdminRoute';
 import FirstLogin from './pages/FirstLogin';
+import ForgotPassword from './pages/ForgotPassword';
 
 import './App.css';
 import AuthEventListener from './components/AuthEventListener';
@@ -25,12 +25,11 @@ import AuthEventListener from './components/AuthEventListener';
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const location = useLocation();
 
-    const hideHeaderPaths = ['/auth', '/first-login'];
+    const hideHeaderPaths = ['/auth', '/first-login', '/forgot-password'];
 
     const titles: Record<string, string> = {
         '/': 'Driving School Class Scheduler',
         '/profile': 'Profile',
-        '/settings': 'Settings',
         '/students': 'Students',
         '/admin': 'Admin Dashboard',
         '/admin/users': 'User Management',
@@ -77,6 +76,7 @@ function AppRoutes() {
             <Routes>
                 {/* Public */}
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
 
                 {/* First login flow */}
                 <Route
@@ -105,16 +105,6 @@ function AppRoutes() {
                         <ValidatedRoute>
                             <Layout>
                                 <Profile />
-                            </Layout>
-                        </ValidatedRoute>
-                    }
-                />
-                <Route
-                    path="/settings"
-                    element={
-                        <ValidatedRoute>
-                            <Layout>
-                                <Settings />
                             </Layout>
                         </ValidatedRoute>
                     }

@@ -1,6 +1,4 @@
 import React, {createContext, useContext, useEffect, useMemo, useState} from "react";
-import { fetchUserSettings, updateUserSettings } from "../services/settingsService";
-import { useAuth } from "./AuthContext";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -24,52 +22,16 @@ function osPrefersDark(): boolean {
 }
 
 export const ThemeProvider: React.FC<React.PropsWithChildren> = ({children}) => {
-    const { token } = useAuth() || {};
     const [theme, setThemeState] = useState<Theme>(getStored);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
-    // Load theme from server on mount
-    useEffect(() => {
-        const loadTheme = async () => {
-            if (!token) {
-                setLoading(false);
-                return;
-            }
-
-            try {
-                setLoading(true);
-                const settings = await fetchUserSettings(token);
-                setThemeState(settings.appearance.theme);
-            } catch (error) {
-                console.error('Failed to load theme from server, using localStorage fallback', error);
-                // Fallback to localStorage
-                setThemeState(getStored());
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadTheme();
-    }, [token]);
-
-    // Set theme function that saves to server and localStorage
-    const setTheme = async (newTheme: Theme) => {
+    // Set theme function that saves to localStorage
+    const setTheme = (newTheme: Theme) => {
         // Update state immediately for responsive UI
         setThemeState(newTheme);
         
-        // Save to localStorage as fallback
+        // Save to localStorage
         localStorage.setItem("theme", newTheme);
-        
-        // Save to server if token is available
-        if (token) {
-            try {
-                await updateUserSettings(token, {
-                    appearance: { theme: newTheme }
-                });
-            } catch (error) {
-                console.error('Failed to save theme to server, using localStorage fallback', error);
-            }
-        }
     };
 
     const resolved = useMemo<"light" | "dark">(

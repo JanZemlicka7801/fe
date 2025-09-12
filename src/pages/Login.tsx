@@ -144,7 +144,7 @@ const Login: React.FC<LoginProps> = ({ onSwitch }) => {
                 
                 {/* Password recovery link */}
                 <div className="forgot-password">
-                    <a href="#" onClick={(e) => { e.preventDefault(); alert('Funkce obnovení hesla bude brzy k dispozici.'); }}>
+                    <a href="#" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }}>
                         Zapomněli jste heslo?
                     </a>
                 </div>
